@@ -11,6 +11,7 @@ API REST para la gestión de eventos y sesiones, desarrollada como proyecto de B
 - Dotenv
 - Nodemon
 - JavaScript (ES Modules)
+- Mongoose (utilizado para la definición de los modelos)
 
 ## Instalación
 
@@ -29,6 +30,9 @@ npm run dev
 
 src/
 
+- app.js
+- server.js
+- config/
 - controllers/
 - services/
 - repositories/
