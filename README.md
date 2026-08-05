@@ -30,41 +30,32 @@ npm run dev
 
 ## Estructura del proyecto
 
+```text
 Backend-II/
 │
-├── node_modules/
-│
 ├── src/
-│ ├── config/
-│ │ └── database.js
-│ │
-│ ├── controllers/
-│ │ ├── events.controller.js
-│ │ └── sessions.controller.js
-│ │
-│ ├── dao/
-│ │ └── events.dao.js
-│ │
-│ ├── middlewares/
-│ │ └── auth.middleware.js
-│ │
-│ ├── models/
-│ │ ├── Event.js
-│ │ └── User.js
-│ │
-│ ├── repositories/
-│ │ └── events.repository.js
-│ │
-│ ├── routes/
-│ │ ├── events.router.js
-│ │ └── sessions.router.js
-│ │
-│ ├── services/
-│ │ ├── events.service.js
-│ │ └── sessions.service.js
-│ │
-│ └── utils/
-│ └── utils.js
+│   ├── config/
+│   │   └── database.js
+│   ├── controllers/
+│   │   ├── events.controller.js
+│   │   └── sessions.controller.js
+│   ├── dao/
+│   │   └── events.dao.js
+│   ├── middlewares/
+│   │   └── auth.middleware.js
+│   ├── models/
+│   │   ├── Event.js
+│   │   └── User.js
+│   ├── repositories/
+│   │   └── events.repository.js
+│   ├── routes/
+│   │   ├── events.router.js
+│   │   └── sessions.router.js
+│   ├── services/
+│   │   ├── events.service.js
+│   │   └── sessions.service.js
+│   └── utils/
+│       └── utils.js
 │
 ├── .env.example
 ├── .gitignore
@@ -73,6 +64,7 @@ Backend-II/
 ├── package.json
 ├── package-lock.json
 └── README.md
+```
 
 ## Endpoints disponibles
 
