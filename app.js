@@ -1,6 +1,6 @@
 import express from "express";
-import eventsRouter from "./routes/events.router.js";
-import sessionsRouter from "./routes/sessions.router.js";
+import eventsRouter from "./src/routes/events.router.js";
+import sessionsRouter from "./src/routes/sessions.router.js";
 
 const app = express();
 

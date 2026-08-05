@@ -22,30 +22,62 @@ API REST para la gestión de eventos y sesiones, desarrollada como proyecto de B
 
 Crear un archivo .env utilizando .env.example como referencia.
 
+Ejemplo: PORT=
+
 ## Ejecución
 
 npm run dev
 
 ## Estructura del proyecto
 
-src/
-
-- app.js
-- server.js
-- config/
-- controllers/
-- services/
-- repositories/
-- dao/
-- models/
-- middlewares/
-- routes/
-- utils/
+Backend-II/
+│
+├── node_modules/
+│
+├── src/
+│ ├── config/
+│ │ └── database.js
+│ │
+│ ├── controllers/
+│ │ ├── events.controller.js
+│ │ └── sessions.controller.js
+│ │
+│ ├── dao/
+│ │ └── events.dao.js
+│ │
+│ ├── middlewares/
+│ │ └── auth.middleware.js
+│ │
+│ ├── models/
+│ │ ├── Event.js
+│ │ └── User.js
+│ │
+│ ├── repositories/
+│ │ └── events.repository.js
+│ │
+│ ├── routes/
+│ │ ├── events.router.js
+│ │ └── sessions.router.js
+│ │
+│ ├── services/
+│ │ ├── events.service.js
+│ │ └── sessions.service.js
+│ │
+│ └── utils/
+│ └── utils.js
+│
+├── .env.example
+├── .gitignore
+├── app.js
+├── server.js
+├── package.json
+├── package-lock.json
+└── README.md
 
 ## Endpoints disponibles
 
-GET /api/health
+- GET /api/health - Respuesta: { "status": "ok", "message": "Servidor activo" }
 
-GET /api/events
+- GET /api/events - Respuesta: { "status": "success", "payload": [] }
 
-GET /api/sessions
+- GET /api/sessions - Respuesta: { "status": "success", "message": "Modulo de sesiones listo" }
