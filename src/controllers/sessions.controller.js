@@ -1,10 +1,26 @@
-import { getAllSessions } from "../services/sessions.service.js";
+import sessionsService from "../services/sessions.service.js";
 
-export const getSessions = (req, res) => {
-  const message = getAllSessions();
+export const register = async (req, res) => {
+  try {
+    const result = await sessionsService.register(req.body);
 
-  res.status(200).json({
-    status: "success",
-    message,
-  });
+    return res.status(201).json({
+      status: "success",
+      payload: result,
+    });
+  } catch (error) {
+    if (error.message === "EMAIL_EXISTS") {
+      return res.status(409).json({
+        status: "error",
+
+        message: "El email ya esta registrado",
+      });
+    }
+
+    return res.status(400).json({
+      status: "error",
+
+      message: error.message,
+    });
+  }
 };

@@ -12,6 +12,9 @@ API REST para la gestión de eventos y sesiones, desarrollada como proyecto de B
 - Nodemon
 - JavaScript (ES Modules)
 - Mongoose (utilizado para la definición de los modelos)
+- Postman
+- MongoDB Compass
+- Bcrypt
 
 ## Instalación
 
@@ -22,7 +25,10 @@ API REST para la gestión de eventos y sesiones, desarrollada como proyecto de B
 
 Crear un archivo .env utilizando .env.example como referencia.
 
-Ejemplo: PORT=
+Ejemplo:
+
+PORT=
+MONGO_URL=
 
 ## Ejecución
 
@@ -36,26 +42,36 @@ Backend-II/
 ├── src/
 │   ├── config/
 │   │   └── database.js
+│   │
 │   ├── controllers/
 │   │   ├── events.controller.js
 │   │   └── sessions.controller.js
+│   │
 │   ├── dao/
-│   │   └── events.dao.js
+│   │   ├── events.dao.js
+│   │   └── users.dao.js
+│   │
 │   ├── middlewares/
 │   │   └── auth.middleware.js
+│   │
 │   ├── models/
 │   │   ├── Event.js
 │   │   └── User.js
-│   ├── repositories/
-│   │   └── events.repository.js
+│   │
+│   ├── repository/
+│   │   ├── events.repository.js
+│   │   └── user.repository.js
+│   │
 │   ├── routes/
 │   │   ├── events.router.js
 │   │   └── sessions.router.js
+│   │
 │   ├── services/
 │   │   ├── events.service.js
 │   │   └── sessions.service.js
+│   │
 │   └── utils/
-│       └── utils.js
+│       └── hash.js
 │
 ├── .env.example
 ├── .gitignore
@@ -72,4 +88,28 @@ Backend-II/
 
 - GET /api/events - Respuesta: { "status": "success", "payload": [] }
 
-- GET /api/sessions - Respuesta: { "status": "success", "message": "Modulo de sesiones listo" }
+- POST /api/sessions/register - Respuesta Exitosa:
+  HTTP 201 Created
+
+  {
+  "status": "success",
+  "payload": {
+  "id": "665f2a...",
+  "first_name": "Ana",
+  "last_name": "Marquez",
+  "email": "ana@mail.com",
+  "role": "user"
+  }
+  }
+
+  HTTP 409 Conflict - Email ya registrado
+  {"status": "error","message": "El email ya está registrado"}
+
+  HTTP 400 Bad Request - Campos incompletos o faltantes
+  {"status": "error","message": "Faltan campos obligatorios"}
+
+  HTTP 400 Bad Request - Contraseña invalida
+  {"status": "error", "message": "La contraseña debe tener al menos 8 caracteres"}
+
+  HTTP 400 Bad Request - Email invalido
+  {"status": "error","message": "Email inválido"}
