@@ -27,8 +27,10 @@ Crear un archivo .env utilizando .env.example como referencia.
 
 Ejemplo:
 
+```env
 PORT=
 MONGO_URL=
+```
 
 ## Ejecución
 
