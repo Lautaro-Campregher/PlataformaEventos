@@ -316,7 +316,7 @@ A continuación se presentan capturas de Postman que muestran el funcionamiento 
 
 El login devuelve `200 OK` y genera la cookie `currentUser` con el JWT de autenticación.
 
-![Login exitoso](./capturas/login.png)
+![Login exitoso](capturas/login.png)
 
 ---
 
@@ -328,7 +328,7 @@ La ruta protegida verifica la cookie `currentUser` y devuelve los datos del usua
 
 **Response `200 OK`:**
 
-![Current autenticado](./capturas/current.png)
+![Current autenticado](capturas/current.png)
 
 ---
 
@@ -340,7 +340,7 @@ El logout elimina la cookie `currentUser` y finaliza la sesión.
 
 **Response `200 OK`:**
 
-![Logout](./capturas/logout.png)
+![Logout](capturas/logout.png)
 
 ---
 
@@ -354,4 +354,4 @@ El servidor rechaza la solicitud correctamente.
 
 **Response `401 Unauthorized`:**
 
-![Current sin autenticación](./capturas/current-401.png)
+![Current sin autenticación](capturas/current-401.png)
