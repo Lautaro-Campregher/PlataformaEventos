@@ -354,4 +354,4 @@ El servidor rechaza la solicitud correctamente.
 
 **Response `401 Unauthorized`:**
 
-![Current sin autenticación](./capturas/Current401.png)
+![Current sin autenticación](capturas/Current401.png)
