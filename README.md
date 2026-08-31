@@ -4,19 +4,29 @@
 
 API REST para la gestión de eventos y sesiones, desarrollada como proyecto de Backend II.
 
+El proyecto implementa una arquitectura basada en capas, utilizando Controllers, Services, DAOs y Repositories para separar responsabilidades.
+
+La autenticación fue refactorizada utilizando Passport.js, centralizando las estrategias de registro, login y usuario actual.
+
+La API mantiene el uso de JWT y cookies HTTP Only para la autenticación.
+
 ## Tecnologías
 
 - Node.js
 - Express
+- JavaScript (ES Modules)
 - Dotenv
 - Nodemon
-- JavaScript (ES Modules)
-- Mongoose (utilizado para la definición de los modelos)
-- Postman
+- Mongoose
+- MongoDB
 - MongoDB Compass
 - Bcrypt
+- Passport.js
+- Passport Local
+- Passport JWT
 - Cookie Parser
-- Json Web Token (JWT)
+- JSON Web Token (JWT)
+- Postman
 
 ## Instalación
 
@@ -41,14 +51,134 @@ NODE_ENV=
 
 npm run dev
 
+## Autenticación con Passport.js
+
+La autenticación de la aplicación está centralizada mediante Passport.js.
+
+Las estrategias se encuentran definidas en:
+
+`src/config/passport.config.js`
+
+Actualmente se implementan tres estrategias:
+
+- register
+- login
+- current
+
+Passport se inicializa en app.js mediante:
+
+`passport.initialize()`
+
+- Las rutas de sesiones delegan la autenticación en Passport mediante un middleware reutilizable que encapsula passport.authenticate() y permite controlar las respuestas de error de la API.
+
+### Estrategia register
+
+La estrategia register utiliza Passport Local.
+
+Se encarga de procesar el registro de usuarios y delega la persistencia y lógica de negocio correspondiente al UserService.
+
+Durante el registro se realizan las siguientes operaciones:
+
+Validación de los campos obligatorios.
+Normalización del email mediante trim() y toLowerCase().
+Verificación de existencia previa del email.
+Hash de la contraseña mediante Bcrypt.
+Asignación automática del rol user.
+Persistencia del usuario en MongoDB.
+El usuario registrado queda disponible en req.user.
+
+El rol no es recibido desde el registro público.
+
+### Estrategia login
+
+La estrategia login utiliza Passport Local.
+
+Se encarga de validar las credenciales del usuario:
+
+- Normaliza el email.
+- Busca el usuario mediante el DAO.
+- Verifica la contraseña mediante Bcrypt.
+- Rechaza credenciales incorrectas.
+
+Cuando la autenticación es exitosa, Passport coloca el usuario autenticado en:
+
+- req.user
+
+La generación del JWT no pertenece a Passport.
+
+Luego de una autenticación exitosa, el controller de login genera el JWT y lo almacena en la cookie currentUser.
+
+### Estrategia current
+
+La estrategia current utiliza Passport JWT.
+
+El JWT se obtiene desde la cookie:
+
+`currentUser`
+
+La estrategia:
+
+- Extrae el JWT desde la cookie.
+- Verifica la firma utilizando JWT_SECRET.
+- Valida el contenido del token.
+- Busca el usuario correspondiente.
+- Coloca el usuario autenticado en req.user.
+
+Si no existe un token válido, la solicitud es rechazada con HTTP 401.
+
+La respuesta de /current nunca incluye la contraseña del usuario.
+
+## Middleware de autenticación
+
+Se implementó un middleware reutilizable para centralizar el manejo de las respuestas de autenticación.
+
+Ubicación:
+
+`src/middlewares/passport.middleware.js`
+
+El middleware ejecuta:
+
+`passport.authenticate()`
+
+y permite definir el mensaje que devuelve la API cuando la autenticación falla.
+
+De esta manera, se evita utilizar directamente la respuesta genérica de Passport y se mantiene un formato JSON consistente.
+
+El middleware se utiliza con las estrategias:
+
+- register
+- login
+- current
+
+Para evitar exponer información sensible del usuario, se utiliza un UserDTO.
+
+Ubicación:
+
+`src/dto/user.dto.js`
+
+El DTO devuelve únicamente información pública del usuario autenticado:
+
+```json
+{
+  "id": "665f2a...",
+  "email": "ana@mail.com",
+  "role": "user"
+}
+```
+
+La contraseña nunca se incluye en las respuestas de autenticación.
+
 ## Estructura del proyecto
 
 ```text
 Backend-II/
 │
+│
 ├── src/
+│   │
 │   ├── config/
-│   │   └── database.js
+│   │   ├── database.js
+│   │   └── passport.config.js
 │   │
 │   ├── controllers/
 │   │   ├── events.controller.js
@@ -56,16 +186,19 @@ Backend-II/
 │   │
 │   ├── dao/
 │   │   ├── events.dao.js
-│   │   └── users.dao.js
+│   │   └── user.dao.js
+│   │
+│   ├── dto/
+│   │   └── user.dto.js
 │   │
 │   ├── middlewares/
-│   │   └── auth.middleware.js
+│   │   └── passport.middleware.js
 │   │
 │   ├── models/
 │   │   ├── Event.js
 │   │   └── User.js
 │   │
-│   ├── repository/
+│   ├── repositories/
 │   │   ├── events.repository.js
 │   │   └── user.repository.js
 │   │
@@ -75,7 +208,7 @@ Backend-II/
 │   │
 │   ├── services/
 │   │   ├── events.service.js
-│   │   └── sessions.service.js
+│   │   └── user.service.js
 │   │
 │   └── utils/
 │       ├── hash.js
@@ -192,12 +325,13 @@ El campo `role` no se recibe desde el registro público y se asigna automáticam
 }
 ```
 
-**Response `409` — Email ya registrado:**
+**Response `401` — Email ya registrado:**
+Para mantener una respuesta genérica y no revelar información sobre usuarios registrados:
 
 ```json
 {
   "status": "error",
-  "message": "El email ya esta registrado"
+  "message": "Credenciales inválidas"
 }
 ```
 
@@ -276,7 +410,7 @@ La respuesta no incluye la contraseña.
 ```json
 {
   "status": "error",
-  "message": "No autenticado"
+  "message": "Token inválido o manipulado"
 }
 ```
 
@@ -302,6 +436,37 @@ Después de realizar el logout, una solicitud a `/api/sessions/current` sin una 
 ```json
 {
   "status": "error",
-  "message": "No autenticado"
+  "message": "Token inválido o manipulado"
 }
 ```
+
+## Preparación para providers externos
+
+La configuración de Passport se encuentra centralizada en:
+
+`src/config/passport.config.js`
+
+Esta estructura permite incorporar nuevas estrategias de autenticación sin modificar app.js.
+
+El sistema queda preparado para incorporar futuros providers externos, como:
+
+- GitHub
+- Google
+- Otros proveedores OAuth
+
+La incorporación de nuevas estrategias puede realizarse dentro de passport.config.js, manteniendo separada la configuración de Passport del resto de la aplicación.
+
+## Seguridad
+
+Se aplicaron las siguientes medidas:
+
+- Contraseñas almacenadas mediante hash con Bcrypt.
+- JWT firmado mediante una clave secreta definida en JWT_SECRET.
+- JWT almacenado en cookie HttpOnly.
+- Cookie configurada con SameSite: lax.
+- Cookie configurada como Secure en producción.
+- No se devuelve la contraseña en las respuestas de la API.
+- Se utiliza UserDTO para exponer únicamente los datos necesarios del usuario.
+- Las credenciales inválidas utilizan un mensaje genérico.
+- El archivo .env no se incluye en el repositorio.
+- Las credenciales sensibles no se almacenan en el código fuente.

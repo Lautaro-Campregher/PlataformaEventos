@@ -1,34 +1,22 @@
-import sessionsService from "../services/sessions.service.js";
 import { generateJWT } from "../utils/jwt.js";
+import UserDTO from "../dto/user.dto.js";
+
 export const register = async (req, res) => {
-  try {
-    const result = await sessionsService.register(req.body);
-
-    return res.status(201).json({
-      status: "success",
-      payload: result,
-    });
-  } catch (error) {
-    if (error.message === "EMAIL_EXISTS") {
-      return res.status(409).json({
-        status: "error",
-
-        message: "El email ya está registrado",
-      });
-    }
-
-    return res.status(400).json({
-      status: "error",
-
-      message: error.message,
-    });
-  }
+  return res.status(201).json({
+    status: "success",
+    payload: req.user,
+  });
 };
 
 export const login = async (req, res) => {
   try {
-    const tokenUser = await sessionsService.login(req.body);
-    const token = generateJWT(tokenUser);
+    const user = req.user;
+
+    const token = generateJWT({
+      id: user._id.toString(),
+      email: user.email,
+      role: user.role,
+    });
 
     res.cookie("currentUser", token, {
       httpOnly: true,
@@ -56,13 +44,11 @@ export const login = async (req, res) => {
 };
 
 export const getCurrentUser = async (req, res) => {
+  const userDTO = new UserDTO(req.user);
+
   return res.status(200).json({
     status: "success",
-    payload: {
-      id: req.user.id,
-      email: req.user.email,
-      role: req.user.role,
-    },
+    payload: userDTO,
   });
 };
 
