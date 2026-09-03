@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { passportMiddleware } from "../middlewares/passport.middleware.js";
+import { passportMiddleware } from "../middlewares/passportMiddleware.js";
 import {
   register,
   login,

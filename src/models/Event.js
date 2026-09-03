@@ -1,27 +1,34 @@
 import mongoose from "mongoose";
 
-const eventSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true,
+const eventSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    date: {
+      type: Date,
+      required: true,
+    },
+
+    capacity: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    organizer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
-  description: {
-    type: String,
-    required: true,
+  {
+    timestamps: true,
   },
-  date: {
-    type: Date,
-    required: true,
-  },
-  location: {
-    type: String,
-    required: true,
-  },
-  capacity: {
-    type: Number,
-    required: true,
-  },
-});
+);
 
 const Event = mongoose.model("Event", eventSchema);
 
