@@ -1,4 +1,4 @@
-import Event from "../models/event.model.js";
+import Event from "../models/Event.js";
 
 class EventRepository {
   async create(eventData) {

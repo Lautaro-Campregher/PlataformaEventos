@@ -1,4 +1,4 @@
-import eventRepository from "../repositories/event.repository.js";
+import eventRepository from "../repository/events.repository.js";
 
 class EventDAO {
   async createEvent(eventData) {

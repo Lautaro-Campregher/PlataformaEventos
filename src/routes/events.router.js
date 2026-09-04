@@ -29,3 +29,5 @@ router.put(
   authorizeEventOwnerOrAdmin,
   updateEventController,
 );
+
+export default router;

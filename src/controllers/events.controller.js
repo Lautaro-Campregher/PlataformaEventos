@@ -1,10 +1,10 @@
-import eventsService from "../services/events.service";
+import eventsService from "../services/events.service.js";
 
 export const createEventController = async (req, res, next) => {
   try {
-    const { name, date, capacity, organizer } = req.body;
+    const { name, date, capacity } = req.body;
 
-    const owner = req.user ? req.user._id : organizer;
+    const owner = req.user.id;
 
     const newEvent = await eventsService.createEvent(
       {

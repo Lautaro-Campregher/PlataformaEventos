@@ -5,6 +5,7 @@ import { connectDB } from "./src/config/database.js";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import passport from "passport";
+import adminRouter from "./src/routes/admin.router.js";
 
 const app = express();
 
@@ -27,5 +28,6 @@ app.get("/api/health", (req, res) => {
 
 app.use("/api/events", eventsRouter);
 app.use("/api/sessions", sessionsRouter);
+app.use("/api/admin", adminRouter);
 
 export default app;
