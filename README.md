@@ -49,7 +49,29 @@ NODE_ENV=
 
 ## Ejecución
 
+El servidor se ejecuta por defecto en el puerto `8080`.
+
+```bash
 npm run dev
+```
+
+## Seed de usuarios
+
+El proyecto incluye un seed para crear usuarios de prueba con diferentes roles.
+
+Para ejecutarlo:
+
+`npm run seed:users`
+
+El seed crea los siguientes usuarios:
+
+Email Password Rol
+user@example.com 123456 user
+organizer@example.com 123456 organizer
+organizer2@example.com 123456 organizer
+admin@example.com 123456 admin
+
+Si un usuario ya existe, el seed no lo duplica.
 
 ## Autenticación con Passport.js
 
@@ -128,13 +150,13 @@ Si no existe un token válido, la solicitud es rechazada con HTTP 401.
 
 La respuesta de /current nunca incluye la contraseña del usuario.
 
-## Middleware de autenticación
+## Middleware reutilizable de Passport
 
-Se implementó un middleware reutilizable para centralizar el manejo de las respuestas de autenticación.
+Se implementó un middleware reutilizable para centralizar el manejo de la autenticación mediante Passport.js.
 
 Ubicación:
 
-`src/middlewares/passport.middleware.js`
+`src/middlewares/passportMiddleware.js`
 
 El middleware ejecuta:
 
@@ -168,11 +190,50 @@ El DTO devuelve únicamente información pública del usuario autenticado:
 
 La contraseña nunca se incluye en las respuestas de autenticación.
 
+## Middleware de autenticación y autorización
+
+La aplicación utiliza middlewares reutilizables para controlar el acceso a las rutas protegidas.
+
+### Authentication Middleware
+
+Ubicación:
+
+`src/middlewares/authenticationMiddleware.js`
+
+Este middleware verifica la existencia y validez del JWT almacenado en la cookie `currentUser`.
+
+Si el token es válido, el usuario autenticado queda disponible en:
+
+`req.user`
+
+Si no existe una sesión válida, la API responde con:
+
+`401 Unauthorized`
+
+### Authorization Middleware
+
+Ubicación:
+
+`src/middlewares/authorizeRoleMiddleware.js`
+
+Este middleware recibe los roles permitidos para una determinada ruta.
+
+Ejemplo:
+
+`authorizeRoles(["organizer", "admin"])`
+
+Si el usuario está autenticado pero no posee uno de los roles permitidos, la API responde:
+
+`403 Forbidden`
+
+con el mensaje:
+
+`No tenés permisos para realizar esta acción`
+
 ## Estructura del proyecto
 
 ```text
 Backend-II/
-│
 │
 ├── src/
 │   │
@@ -181,34 +242,43 @@ Backend-II/
 │   │   └── passport.config.js
 │   │
 │   ├── controllers/
+│   │   ├── admin.controller.js
 │   │   ├── events.controller.js
 │   │   └── sessions.controller.js
 │   │
 │   ├── dao/
 │   │   ├── events.dao.js
-│   │   └── user.dao.js
+│   │   └── users.dao.js
 │   │
 │   ├── dto/
 │   │   └── user.dto.js
 │   │
 │   ├── middlewares/
-│   │   └── passport.middleware.js
+│   │   ├── authenticationMiddleware.js
+│   │   ├── authorizeEventOwnerOrAdmin.js
+│   │   ├── authorizeRoleMiddleware.js
+│   │   └── passportMiddleware.js
 │   │
 │   ├── models/
 │   │   ├── Event.js
 │   │   └── User.js
 │   │
-│   ├── repositories/
+│   ├── repository/
 │   │   ├── events.repository.js
 │   │   └── user.repository.js
 │   │
 │   ├── routes/
+│   │   ├── admin.router.js
 │   │   ├── events.router.js
 │   │   └── sessions.router.js
 │   │
+│   ├── seed/
+│   │   └── seed.users.js
+│   │
 │   ├── services/
 │   │   ├── events.service.js
-│   │   └── user.service.js
+│   │   ├── sessions.service.js
+│   │   └── user.services.js
 │   │
 │   └── utils/
 │       ├── hash.js
@@ -223,16 +293,108 @@ Backend-II/
 └── README.md
 ```
 
+## Roles y permisos
+
+La aplicación utiliza tres roles:
+
+- user
+- organizer
+- admin
+
+| Acción                                   | user | organizer | admin |
+| ---------------------------------------- | :--: | :-------: | :---: |
+| Registrarse                              |  ✅  |     —     |   —   |
+| Iniciar sesión                           |  ✅  |    ✅     |  ✅   |
+| Consultar eventos publicados             |  ✅  |    ✅     |  ✅   |
+| Crear eventos                            |  ❌  |    ✅     |  ✅   |
+| Modificar sus propios eventos            |  ❌  |    ✅     |  ✅   |
+| Modificar eventos de otros organizadores |  ❌  |    ❌     |  ✅   |
+| Consultar usuario actual                 |  ✅  |    ✅     |  ✅   |
+| Acceder a `/api/admin/users`             |  ❌  |    ❌     |  ✅   |
+
+## Ownership de eventos
+
+Los eventos poseen un campo organizer que referencia al usuario propietario:
+
+```json
+organizer: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  required: true
+}
+```
+
+CEl campo `role` no se recibe desde el registro público.
+
+Todo usuario registrado públicamente recibe automáticamente el rol:
+
+`user`
+
+Por lo tanto, un cliente no puede registrarse públicamente como `organizer` o `admin`.
+
+El propietario no se obtiene desde el body de la petición.
+
+Para modificar un evento se utiliza el middleware:
+
+`src/middlewares/authorizeEventOwnerOrAdmin.js`
+
+Este middleware verifica:
+
+- Si el usuario es admin, puede modificar cualquier evento.
+
+- Si el usuario es organizer, solamente puede modificar sus propios eventos.
+
+- Si un organizer intenta modificar un evento perteneciente a otro organizer, recibe 403 Forbidden.
+
+## Diferencia entre 401 y 403
+
+401 Unauthorized
+
+Se devuelve cuando el usuario no posee una sesión válida.
+
+Ejemplos:
+
+- No existe la cookie currentUser.
+- El JWT es inválido.
+- El JWT está expirado.
+- El JWT fue manipulado.
+
+Ejemplo:
+
+```json
+{
+  "status": "error",
+  "message": "Token inválido o manipulado"
+}
+```
+
+403 Forbidden
+
+Se devuelve cuando el usuario está correctamente autenticado, pero no tiene permisos suficientes para realizar la acción.
+
+Ejemplo:
+
+```json
+{
+  "status": "error",
+  "message": "No tenés permisos para realizar esta acción"
+}
+```
+
 ## Endpoints disponibles
 
-| Método | Path                     | Descripción                                                    |
-| ------ | ------------------------ | -------------------------------------------------------------- |
-| GET    | `/api/health`            | Verifica que el servidor se encuentre activo.                  |
-| GET    | `/api/events`            | Obtiene la lista de eventos disponibles.                       |
-| POST   | `/api/sessions/register` | Registra un nuevo usuario de forma segura.                     |
-| POST   | `/api/sessions/login`    | Autentica un usuario y genera un JWT almacenado en una cookie. |
-| GET    | `/api/sessions/current`  | Obtiene los datos del usuario autenticado mediante la cookie.  |
-| POST   | `/api/sessions/logout`   | Cierra la sesión y elimina la cookie de autenticación.         |
+| Método | Path                     | Autenticación | Rol                         | Descripción                          |
+| ------ | ------------------------ | ------------- | --------------------------- | ------------------------------------ |
+| GET    | `/api/health`            | Pública       | —                           | Verifica que el servidor esté activo |
+| GET    | `/api/events`            | Pública       | —                           | Obtiene los eventos                  |
+| POST   | `/api/events`            | Sí            | organizer/admin             | Crea un evento                       |
+| GET    | `/api/events/:eventId`   | Sí            | Cualquier rol               | Obtiene un evento                    |
+| PUT    | `/api/events/:eventId`   | Sí            | organizer/admin + ownership | Modifica un evento                   |
+| POST   | `/api/sessions/register` | Pública       | —                           | Registra un usuario                  |
+| POST   | `/api/sessions/login`    | Pública       | —                           | Inicia sesión                        |
+| GET    | `/api/sessions/current`  | Sí            | Cualquier rol               | Obtiene el usuario autenticado       |
+| POST   | `/api/sessions/logout`   | Pública       | —                           | Cierra la sesión                     |
+| GET    | `/api/admin/users`       | Sí            | admin                       | Ruta exclusiva para administradores  |
 
 ### GET /api/health
 
@@ -261,6 +423,79 @@ Obtiene la lista de eventos disponibles.
   "payload": []
 }
 ```
+
+---
+
+### POST /api/events
+
+Permite crear eventos.
+
+La ruta requiere autenticación y los únicos roles autorizados son:
+
+`organizer`
+`admin`
+
+El propietario del evento se obtiene automáticamente desde el usuario autenticado.
+
+El campo `organizer` no debe enviarse desde el cliente.
+
+Cuando un usuario con rol `organizer` o `admin` crea un evento, el propietario se obtiene desde `req.user.id`.
+
+Request:
+
+```json
+{
+  "name": "Evento de prueba",
+  "date": "2026-09-20",
+  "capacity": 100
+}
+```
+
+Si la solicitud no posee una sesión válida:
+
+`401 Unauthorized`
+
+Si el usuario está autenticado pero posee el rol `user`:
+
+`403 Forbidden`
+
+Si el usuario posee rol `organizer` o `admin`:
+
+`201 Created`
+
+---
+
+### GET /api/events/:eventId
+
+Permite consultar un evento específico.
+
+La ruta requiere una sesión válida.
+
+Los tres roles pueden acceder:
+
+user
+organizer
+admin
+
+---
+
+### PUT /api/events/:eventId
+
+Permite modificar un evento.
+
+La ruta requiere:
+
+Autenticación.
+Rol organizer o admin.
+Si el usuario es organizer, debe ser propietario del evento.
+
+Un admin puede modificar cualquier evento.
+
+Un organizer solamente puede modificar sus propios eventos.
+
+Si un organizer intenta modificar el evento de otro organizer, recibe:
+
+403 Forbidden
 
 ---
 
@@ -376,7 +611,7 @@ conteniendo el JWT generado.
 ```json
 {
   "status": "error",
-  "message": "Credenciales invalidas"
+  "message": "Credenciales inválidas"
 }
 ```
 
@@ -386,9 +621,11 @@ El mismo mensaje se devuelve tanto cuando el email no existe como cuando la cont
 
 ### GET /api/sessions/current
 
-Ruta protegida mediante middleware de autenticación.
+Ruta protegida mediante la estrategia `current` de Passport JWT.
 
-Lee la cookie `currentUser`, verifica el JWT y devuelve los datos del usuario autenticado.
+Lee la cookie `currentUser`, extrae el JWT, verifica su firma y obtiene el usuario correspondiente.
+
+Si la autenticación es válida, devuelve los datos públicos del usuario autenticado.
 
 La respuesta no incluye la contraseña.
 
@@ -440,6 +677,82 @@ Después de realizar el logout, una solicitud a `/api/sessions/current` sin una 
 }
 ```
 
+### GET /api/admin/users
+
+Ruta administrativa protegida exclusivamente para usuarios con rol `admin`.
+
+Su objetivo es verificar el acceso restringido mediante autorización por roles.
+
+Un usuario con rol `user` recibe:
+
+`403 Forbidden`
+
+Un usuario con rol `organizer` recibe:
+
+`403 Forbidden`
+
+Un usuario con rol `admin` recibe:
+
+`200 OK`
+
+**Response `200`:**
+
+```json
+{
+  "status": "success",
+  "message": "Solo un admin puede ver la lista completa de usuarios",
+  "role": "admin"
+}
+```
+
+## Pruebas realizadas con Postman
+
+Se realizaron pruebas para verificar autenticación, autorización, roles y ownership.
+
+### Autenticación
+
+Login de usuario → 200 OK
+/api/sessions/current con sesión válida → 200 OK
+/api/sessions/current sin sesión válida → 401 Unauthorized
+Logout → eliminación de la cookie de autenticación
+
+### Roles
+
+user intentando crear un evento → 403 Forbidden
+organizer creando un evento → 201 Created
+organizer accediendo a ruta administrativa → 403 Forbidden
+admin accediendo a ruta administrativa → 200 OK
+
+### Ownership
+
+organizer modificando su propio evento → 200 OK
+organizer2 intentando modificar un evento de organizer → 403 Forbidden
+admin modificando un evento perteneciente a otro organizer → 200 OK
+
+Estas pruebas permiten verificar el funcionamiento de los middlewares de autenticación, autorización por roles y control de propiedad de recursos.
+
+- POST `/api/events` sin autenticación → `401 Unauthorized`
+- GET `/api/sessions/current` sin sesión → `401 Unauthorized`
+- GET `/api/sessions/current` con sesión válida → `200 OK`
+- PUT `/api/events/:eventId` por organizer propietario → `200 OK`
+- PUT `/api/events/:eventId` por otro organizer → `403 Forbidden`
+- PUT `/api/events/:eventId` por admin → `200 OK`
+
+## Seguridad
+
+Se aplicaron las siguientes medidas:
+
+- Contraseñas almacenadas mediante hash con Bcrypt.
+- JWT firmado mediante una clave secreta definida en JWT_SECRET.
+- JWT almacenado en cookie HttpOnly.
+- Cookie configurada con SameSite: lax.
+- Cookie configurada como Secure en producción.
+- No se devuelve la contraseña en las respuestas de la API.
+- Se utiliza UserDTO para exponer únicamente los datos necesarios.
+- Las credenciales inválidas utilizan mensajes genéricos.
+- El archivo .env no se incluye en el repositorio.
+- Las credenciales sensibles no se almacenan en el código fuente.
+
 ## Preparación para providers externos
 
 La configuración de Passport se encuentra centralizada en:
@@ -455,18 +768,3 @@ El sistema queda preparado para incorporar futuros providers externos, como:
 - Otros proveedores OAuth
 
 La incorporación de nuevas estrategias puede realizarse dentro de passport.config.js, manteniendo separada la configuración de Passport del resto de la aplicación.
-
-## Seguridad
-
-Se aplicaron las siguientes medidas:
-
-- Contraseñas almacenadas mediante hash con Bcrypt.
-- JWT firmado mediante una clave secreta definida en JWT_SECRET.
-- JWT almacenado en cookie HttpOnly.
-- Cookie configurada con SameSite: lax.
-- Cookie configurada como Secure en producción.
-- No se devuelve la contraseña en las respuestas de la API.
-- Se utiliza UserDTO para exponer únicamente los datos necesarios del usuario.
-- Las credenciales inválidas utilizan un mensaje genérico.
-- El archivo .env no se incluye en el repositorio.
-- Las credenciales sensibles no se almacenan en el código fuente.

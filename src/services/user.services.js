@@ -1,4 +1,3 @@
-import userRepository from "../repository/user.repository.js";
 import { createHash } from "../utils/hash.js";
 import userDAO from "../dao/users.dao.js";
 
