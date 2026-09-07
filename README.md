@@ -277,7 +277,6 @@ Backend-II/
 │   │
 │   ├── services/
 │   │   ├── events.service.js
-│   │   ├── sessions.service.js
 │   │   └── user.services.js
 │   │
 │   └── utils/
