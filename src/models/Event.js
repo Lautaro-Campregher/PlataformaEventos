@@ -2,7 +2,19 @@ import mongoose from "mongoose";
 
 const eventSchema = new mongoose.Schema(
   {
-    name: {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    category: {
       type: String,
       required: true,
       trim: true,
@@ -13,10 +25,28 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
 
+    location: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
     capacity: {
       type: Number,
-      default: 0,
+      required: true,
+      min: 1,
+    },
+
+    price: {
+      type: Number,
+      required: true,
       min: 0,
+    },
+
+    status: {
+      type: String,
+      enum: ["draft", "published", "cancelled", "finished"],
+      default: "draft",
     },
 
     organizer: {

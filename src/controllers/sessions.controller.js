@@ -2,10 +2,19 @@ import { generateJWT } from "../utils/jwt.js";
 import UserDTO from "../dto/user.dto.js";
 
 export const register = async (req, res) => {
-  return res.status(201).json({
-    status: "success",
-    payload: req.user,
-  });
+  try {
+    const userDTO = new UserDTO(req.user);
+
+    return res.status(201).json({
+      status: "success",
+      payload: userDTO,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
 };
 
 export const login = async (req, res) => {

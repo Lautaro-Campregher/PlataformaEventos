@@ -8,7 +8,7 @@ export const authorizeEventOwnerOrAdmin = async (req, res, next) => {
     if (!event) {
       return res
         .status(404)
-        .json({ status: "error", message: "no se encontro el evento" });
+        .json({ status: "error", message: "no se encontró el evento" });
     }
 
     const role = req.user.role;

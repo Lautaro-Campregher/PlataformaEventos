@@ -9,8 +9,17 @@ class EventRepository {
     return await Event.findById(id);
   }
 
-  async findAll() {
-    return await Event.find();
+  async findAll(filters, { skip, limit, sort }) {
+    const [events, total] = await Promise.all([
+      Event.find(filters).sort(sort).skip(skip).limit(limit),
+
+      Event.countDocuments(filters),
+    ]);
+
+    return {
+      events,
+      total,
+    };
   }
 
   async updateById(id, eventData) {

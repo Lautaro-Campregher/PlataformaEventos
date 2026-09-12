@@ -9,8 +9,8 @@ class EventDAO {
     return await eventRepository.findById(id);
   }
 
-  async getEvents() {
-    return await eventRepository.findAll();
+  async getEvents(filters, pagination) {
+    return eventRepository.findAll(filters, pagination);
   }
 
   async updateEvent(id, eventData) {
