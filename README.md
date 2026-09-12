@@ -442,25 +442,16 @@ La aplicación utiliza tres roles:
 
 - admin
 
-| Acción                                   | user | organizer | admin |
-
+| Acción                                   | user | organizer | admin |
 | ---------------------------------------- | :--: | :-------: | :---: |
-
-| Registrarse                              |  ✅  |     —     |   —   |
-
-| Iniciar sesión                           |  ✅  |    ✅     |  ✅   |
-
-| Consultar eventos publicados             |  ✅  |    ✅     |  ✅   |
-
-| Crear eventos                            |  ❌  |    ✅     |  ✅   |
-
-| Modificar sus propios eventos            |  ❌  |    ✅     |  ✅   |
-
-| Modificar eventos de otros organizadores |  ❌  |    ❌     |  ✅   |
-
-| Consultar usuario actual                 |  ✅  |    ✅     |  ✅   |
-
-| Acceder a `/api/admin/users`             |  ❌  |    ❌     |  ✅   |
+| Registrarse                              |  ✅  |     —     |   —   |
+| Iniciar sesión                           |  ✅  |    ✅     |  ✅   |
+| Consultar eventos publicados             |  ✅  |    ✅     |  ✅   |
+| Crear eventos                            |  ❌  |    ✅     |  ✅   |
+| Modificar sus propios eventos            |  ❌  |    ✅     |  ✅   |
+| Modificar eventos de otros organizadores |  ❌  |    ❌     |  ✅   |
+| Consultar usuario actual                 |  ✅  |    ✅     |  ✅   |
+| Acceder a `/api/admin/users`             |  ❌  |    ❌     |  ✅   |
 
 ## Ownership de eventos
 
@@ -544,29 +535,19 @@ Ejemplo:
 
 ## Endpoints disponibles
 
-| Método | Path                     | Autenticación | Rol                         | Descripción                          |
-
-| ------ | ------------------------ | ------------- | --------------------------- | ------------------------------------ |
-
-| GET    | `/api/health`            | Pública       | —                           | Verifica que el servidor esté activo |
-
-| GET    | `/api/events`            | Pública       | —                           | Obtiene los eventos                  |
-
-| POST   | `/api/events`            | Sí            | organizer/admin             | Crea un evento                       |
-
-| GET    | `/api/events/:eventId`   | Pública        | Cualquier rol               | Obtiene un evento                    |
-
-| PUT    | `/api/events/:eventId`   | Sí            | organizer/admin + ownership | Modifica un evento                   |
-
-| POST   | `/api/sessions/register` | Pública       | —                           | Registra un usuario                  |
-
-| POST   | `/api/sessions/login`    | Pública       | —                           | Inicia sesión                        |
-
-| GET    | `/api/sessions/current`  | Sí            | Cualquier rol               | Obtiene el usuario autenticado       |
-
-| POST   | `/api/sessions/logout`   | Pública       | —                           | Cierra la sesión                     |
-
-| GET    | `/api/admin/users`       | Sí            | admin                       | Ruta exclusiva para administradores  |
+| Método | Path                          | Autenticación | Rol                         | Descripción                                                |
+| ------ | ----------------------------- | ------------- | --------------------------- | ---------------------------------------------------------- |
+| GET    | `/api/health`                 | Pública       | —                           | Verifica que el servidor esté activo                       |
+| GET    | `/api/events`                 | Pública       | —                           | Obtiene los eventos con filtros, paginación y ordenamiento |
+| POST   | `/api/events`                 | Sí            | organizer/admin             | Crea un evento                                             |
+| GET    | `/api/events/:eventId`        | Pública       | —                           | Obtiene un evento específico                               |
+| PUT    | `/api/events/:eventId`        | Sí            | organizer/admin + ownership | Modifica un evento                                         |
+| PATCH  | `/api/events/:eventId/status` | Sí            | organizer/admin + ownership | Cambia el estado de un evento                              |
+| POST   | `/api/sessions/register`      | Pública       | —                           | Registra un usuario                                        |
+| POST   | `/api/sessions/login`         | Pública       | —                           | Inicia sesión                                              |
+| GET    | `/api/sessions/current`       | Sí            | Cualquier rol               | Obtiene el usuario autenticado                             |
+| POST   | `/api/sessions/logout`        | Pública       | —                           | Cierra la sesión                                           |
+| GET    | `/api/admin/users`            | Sí            | admin                       | Ruta exclusiva para administradores                        |
 
 ### GET /api/health
 
