@@ -42,6 +42,8 @@ La API mantiene el uso de JWT y cookies HTTP Only para la autenticación.
 
 - Postman
 
+- Nodemailer
+
 ## Instalación
 
 1. Clonar el repositorio.
@@ -66,7 +68,21 @@ JWT_EXPIRES_IN=
 
 NODE_ENV=
 
+MAIL_HOST=
+
+MAIL_PORT=
+
+MAIL_USER=
+
+MAIL_PASS=
+
+MAIL_FROM=
+
 ```
+
+Las variables `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASS` y `MAIL_FROM` corresponden a la configuración SMTP utilizada por Nodemailer para el envío de correos de confirmación de inscripción.
+
+Las credenciales reales deben mantenerse únicamente en el archivo `.env` y no deben incluirse en el repositorio.
 
 ## Ejecución
 
@@ -244,17 +260,17 @@ La aplicación utiliza middlewares reutilizables para controlar el acceso a las 
 
 Ubicación:
 
-`src/middlewares/authenticationMiddleware.js`
+`src/middlewares/passportMiddleware.js`
 
-Este middleware verifica la existencia y validez del JWT almacenado en la cookie `currentUser`.
+Este middleware utiliza Passport.js junto con la estrategia JWT "current" para verificar la existencia y validez del token almacenado en la cookie currentUser.
 
 Si el token es válido, el usuario autenticado queda disponible en:
 
-`req.user`
+req.user
 
 Si no existe una sesión válida, la API responde con:
 
-`401 Unauthorized`
+401 Unauthorized
 
 ### Authorization Middleware
 
@@ -266,15 +282,41 @@ Este middleware recibe los roles permitidos para una determinada ruta.
 
 Ejemplo:
 
-`authorizeRoles(["organizer", "admin"])`
+authorizeRoles(["organizer", "admin"])
 
-Si el usuario está autenticado pero no posee uno de los roles permitidos, la API responde:
+Si el usuario está autenticado pero no posee uno de los roles permitidos, la API responde con:
 
-`403 Forbidden`
+403 Forbidden
 
 con el mensaje:
 
-`No tenés permisos para realizar esta acción`
+No tenés permisos para realizar esta acción
+
+### Authorization por propietario del recurso
+
+Para determinadas operaciones sobre eventos se utiliza:
+
+src/middlewares/authorizeEventOwnerOrAdmin.js
+
+Este middleware verifica que el usuario autenticado sea el organizador propietario del evento o tenga rol admin.
+
+Los usuarios que no cumplan ninguna de estas condiciones reciben:
+
+403 Forbidden
+
+Authorization para consulta de tickets de un evento
+
+Para consultar los tickets asociados a un evento se utiliza:
+
+`src/middlewares/authorizeEventTickets.js`
+
+Permite el acceso al organizador propietario del evento o a un usuario con rol admin.
+
+Un usuario común o un organizador que no sea propietario del evento recibe:
+
+403 Forbidden
+
+Esta versión queda alineada con tus archivos reales y además documenta los dos middlewares específicos de PE7.
 
 ## Estructura del proyecto
 
@@ -294,7 +336,7 @@ Backend-II/
 
 │   │   └── passport.config.js
 
-│   │
+│   │   └── mailer.js
 
 │   ├── controllers/
 
@@ -304,7 +346,7 @@ Backend-II/
 
 │   │   └── sessions.controller.js
 
-│   │
+│   │   └── tickets.controller.js
 
 │   ├── dao/
 
@@ -312,7 +354,7 @@ Backend-II/
 
 │   │   └── users.dao.js
 
-│   │
+│   │   └── tickets.dao.js
 
 │   ├── dto/
 
@@ -332,13 +374,15 @@ Backend-II/
 
 │   │   └── errorMiddleware.js
 
+│   │   └── authorizeEventTickets.js
+
 │   ├── models/
 
 │   │   ├── Event.js
 
 │   │   └── User.js
 
-│   │
+│   │   └── Ticket.js
 
 │   ├── repository/
 
@@ -346,7 +390,7 @@ Backend-II/
 
 │   │   └── user.repository.js
 
-│   │
+│   │   └── tickets.repository.js
 
 │   ├── routes/
 
@@ -356,7 +400,7 @@ Backend-II/
 
 │   │   └── sessions.router.js
 
-│   │
+│   │   └── tickets.router.js
 
 │   ├── seed/
 
@@ -370,7 +414,9 @@ Backend-II/
 
 │   │   └── user.services.js
 
-│   │
+│   │   ├── mail.service.js
+
+│   │   └── tickets.service.js
 
 │   └── utils/
 
@@ -535,19 +581,94 @@ Ejemplo:
 
 ## Endpoints disponibles
 
-| Método | Path                          | Autenticación | Rol                         | Descripción                                                |
-| ------ | ----------------------------- | ------------- | --------------------------- | ---------------------------------------------------------- |
-| GET    | `/api/health`                 | Pública       | —                           | Verifica que el servidor esté activo                       |
-| GET    | `/api/events`                 | Pública       | —                           | Obtiene los eventos con filtros, paginación y ordenamiento |
-| POST   | `/api/events`                 | Sí            | organizer/admin             | Crea un evento                                             |
-| GET    | `/api/events/:eventId`        | Pública       | —                           | Obtiene un evento específico                               |
-| PUT    | `/api/events/:eventId`        | Sí            | organizer/admin + ownership | Modifica un evento                                         |
-| PATCH  | `/api/events/:eventId/status` | Sí            | organizer/admin + ownership | Cambia el estado de un evento                              |
-| POST   | `/api/sessions/register`      | Pública       | —                           | Registra un usuario                                        |
-| POST   | `/api/sessions/login`         | Pública       | —                           | Inicia sesión                                              |
-| GET    | `/api/sessions/current`       | Sí            | Cualquier rol               | Obtiene el usuario autenticado                             |
-| POST   | `/api/sessions/logout`        | Pública       | —                           | Cierra la sesión                                           |
-| GET    | `/api/admin/users`            | Sí            | admin                       | Ruta exclusiva para administradores                        |
+| Método | Path                          | Autenticación | Rol                           | Descripción                                                |
+| ------ | ----------------------------- | ------------- | ----------------------------- | ---------------------------------------------------------- |
+| GET    | `/api/health`                 | Pública       | —                             | Verifica que el servidor esté activo                       |
+| GET    | `/api/events`                 | Pública       | —                             | Obtiene los eventos con filtros, paginación y ordenamiento |
+| POST   | `/api/events`                 | Sí            | organizer/admin               | Crea un evento                                             |
+| GET    | `/api/events/:eventId`        | Pública       | —                             | Obtiene un evento específico                               |
+| PUT    | `/api/events/:eventId`        | Sí            | organizer/admin + ownership   | Modifica un evento                                         |
+| PATCH  | `/api/events/:eventId/status` | Sí            | organizer/admin + ownership   | Cambia el estado de un evento                              |
+| POST   | `/api/sessions/register`      | Pública       | —                             | Registra un usuario                                        |
+| POST   | `/api/sessions/login`         | Pública       | —                             | Inicia sesión                                              |
+| GET    | `/api/sessions/current`       | Sí            | Cualquier rol                 | Obtiene el usuario autenticado                             |
+| POST   | `/api/sessions/logout`        | Pública       | —                             | Cierra la sesión                                           |
+| GET    | `/api/admin/users`            | Sí            | admin                         | Ruta exclusiva para administradores                        |
+| POST   | `/api/events/:eid/tickets`    | Sí            | Cualquier usuario autenticado | Inscribirse a un evento                                    |
+| GET    | `/api/tickets/my-tickets`     | Sí            | Cualquier usuario autenticado | Obtener mis inscripciones                                  |
+| GET    | `/api/events/:eid/tickets`    | Sí            | Organizador/Admin             | Consultar inscripciones de un evento                       |
+| PATCH  | `/api/tickets/:tid/cancel`    | Sí            | Usuario propietario/admin     | Cancelar una inscripción                                   |
+
+### Reglas de negocio de inscripciones
+
+- Solo los usuarios autenticados pueden inscribirse a eventos.
+- El evento debe existir.
+- El evento debe encontrarse en estado `published`.
+- No se permiten inscripciones a eventos cancelados o finalizados.
+- La cantidad solicitada debe ser un número entero mayor a 0.
+- La cantidad de inscripciones no puede superar los cupos disponibles del evento.
+- Los tickets con estado `cancelled` no ocupan capacidad.
+- Un usuario no puede tener más de una inscripción activa para el mismo evento.
+- Cada inscripción genera un código de reserva único.
+- Las inscripciones se crean inicialmente con estado `confirmed`.
+- Al cancelar una inscripción, el ticket no se elimina físicamente.
+- Al cancelar una inscripción se establece el estado `cancelled` y se registra la fecha en `cancelledAt`.
+- Una inscripción cancelada libera automáticamente los cupos que tenía reservados.
+- Un ticket que ya se encuentra cancelado no puede volver a cancelarse.
+
+### Control de capacidad
+
+La capacidad disponible se calcula tomando la capacidad total del evento y restando la cantidad ocupada por las inscripciones activas.
+
+Los tickets cancelados no se contabilizan como ocupación, por lo que los cupos liberados pueden ser utilizados nuevamente por otros usuarios.
+
+## Estados de las inscripciones
+
+Los tickets pueden tener los siguientes estados:
+
+- `confirmed`: inscripción confirmada correctamente.
+- `pending`: estado contemplado por el modelo para una inscripción pendiente.
+- `cancelled`: inscripción cancelada por el usuario propietario o un administrador.
+
+Las nuevas inscripciones se crean con estado `confirmed`.
+
+Al cancelar una inscripción, el estado pasa a `cancelled` y se registra la fecha de cancelación mediante `cancelledAt`. El ticket permanece almacenado en la base de datos.
+
+### Flujo de inscripción
+
+1. El usuario autenticado solicita una inscripción indicando la cantidad de lugares.
+2. El sistema verifica que el evento exista y esté publicado.
+3. Se valida que la cantidad solicitada sea válida.
+4. Se verifica que el usuario no tenga una inscripción activa para ese evento.
+5. Se calcula la capacidad disponible.
+6. Si existen cupos suficientes, se crea el ticket con estado `confirmed`.
+7. Se genera un código de reserva único.
+8. Se envía un correo electrónico de confirmación mediante Nodemailer.
+9. Si posteriormente el usuario cancela la inscripción, el ticket pasa a `cancelled` y los cupos vuelven a quedar disponibles.
+
+## Notificaciones por correo
+
+El sistema utiliza Nodemailer para enviar un correo electrónico de confirmación luego de completar correctamente una inscripción.
+
+El correo incluye:
+
+- Nombre del evento.
+- Fecha del evento.
+- Ubicación.
+- Cantidad de lugares reservados.
+- Código de reserva.
+
+### Configuración SMTP
+
+La configuración del servicio de correo se realiza mediante variables de entorno:
+
+- `MAIL_HOST`: servidor SMTP.
+- `MAIL_PORT`: puerto utilizado por el servidor SMTP.
+- `MAIL_USER`: usuario de la cuenta de correo.
+- `MAIL_PASS`: contraseña o contraseña de aplicación utilizada para la autenticación SMTP.
+- `MAIL_FROM`: dirección utilizada como remitente del correo.
+
+Las credenciales reales se almacenan únicamente en `.env` y no se incluyen en el repositorio.
 
 ### GET /api/health
 
@@ -599,15 +720,16 @@ Cuando un usuario con rol `organizer` o `admin` crea un evento, el propietario s
 
 Request:
 
-```json
+````json
 {
-  "name": "Evento de prueba",
-
+  "title": "Evento de prueba",
+  "description": "Descripción del evento",
+  "category": "workshop",
   "date": "2026-09-20",
-
-  "capacity": 100
+  "location": "Centro Cultural Córdoba",
+  "capacity": 100,
+  "price": 5000
 }
-```
 
 Si la solicitud no posee una sesión válida:
 
@@ -652,7 +774,7 @@ Si un organizer intenta modificar el evento de otro organizer, recibe:
 
 ---
 
-\*\*## Reglas de negocio de eventos
+## Reglas de negocio de eventos
 
 Las validaciones de negocio se encuentran implementadas en src/services/events.service.js.
 
@@ -676,7 +798,7 @@ El campo organizer no puede ser enviado por el cliente para determinar el propie
 
 ---
 
-### PATCH /api/events//status
+### PATCH /api/events/:eventId/status
 
 Permite cambiar el estado de un evento.
 
@@ -712,7 +834,255 @@ Response 200:
 
 ---
 
-### POST /api/sessions/register\*\*
+### POST `/api/events/:eid/tickets`
+
+Permite a un usuario autenticado inscribirse a un evento publicado.
+
+**Autenticación:** Sí.
+
+**Roles:** Cualquier usuario autenticado.
+
+**Body:**
+
+```json
+{
+  "quantity": 1
+}
+````
+
+**Respuesta exitosa:** `201 Created`
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "_id": "...",
+    "user": "...",
+    "event": "...",
+    "status": "confirmed",
+    "quantity": 1,
+    "reservationCode": "...",
+    "cancelledAt": null,
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+}
+```
+
+Errores posibles:
+
+401 Unauthorized: usuario no autenticado.
+404 Not Found: evento inexistente.
+400 Bad Request: evento no publicado.
+400 Bad Request: evento finalizado.
+400 Bad Request: cantidad inválida.
+400 Bad Request: el usuario ya posee una inscripción activa.
+400 Bad Request: no hay cupos suficientes.
+
+---
+
+### GET `/api/tickets/my-tickets`
+
+Permite al usuario autenticado consultar sus propias inscripciones.
+
+**Autenticación:** Sí.
+
+**Roles:** Cualquier usuario autenticado.
+
+**Comportamiento:**
+
+- Solo devuelve los tickets pertenecientes al usuario autenticado.
+- Los datos del evento se obtienen mediante `populate`.
+- Se muestra la información básica del evento: título, fecha y ubicación.
+- No permite consultar las inscripciones de otros usuarios.
+
+**Respuesta exitosa:** `200 OK`
+
+```json
+{
+  "status": "success",
+  "payload": [
+    {
+      "_id": "6aa9f0613428ab8186e09b91",
+      "user": "6a9a3cc13066fab12e60f39c",
+      "event": {
+        "_id": "6aa58a15349fc1a1418a7c43",
+        "title": "Evento modificado correctamente",
+        "date": "2026-09-30T00:00:00.000Z",
+        "location": "Centro Cultural Córdoba"
+      },
+      "status": "confirmed",
+      "quantity": 1,
+      "reservationCode": "RES-1789522017542-689",
+      "cancelledAt": null,
+      "createdAt": "2026-09-16T19:30:00.000Z",
+      "updatedAt": "2026-09-16T19:30:00.000Z"
+    }
+  ]
+}
+```
+
+Errores posibles:
+
+401 Unauthorized: usuario no autenticado.
+
+```json
+{
+  "status": "error",
+  "message": "No autenticado"
+}
+```
+
+Nota: Si el usuario autenticado no tiene inscripciones, la respuesta es 200 OK con un payload vacío:
+
+```json
+{
+  "status": "success",
+  "payload": []
+}
+```
+
+---
+
+### GET `/api/events/:eid/tickets`
+
+Permite consultar las inscripciones correspondientes a un evento.
+
+**Autenticación:** Sí.
+
+**Roles:** `organizer` propietario del evento o `admin`.
+
+**Comportamiento:**
+
+- Verifica que el evento exista.
+- El organizador solo puede consultar los tickets de sus propios eventos.
+- El administrador puede consultar los tickets de cualquier evento.
+- Un usuario común no tiene permisos para consultar las inscripciones de un evento.
+- Los tickets cancelados también pueden aparecer en la consulta, ya que no se eliminan físicamente.
+
+**Respuesta exitosa:** `200 OK`
+
+```json
+{
+  "status": "success",
+  "payload": [
+    {
+      "_id": "6aa9f0613428ab8186e09b91",
+      "user": "6a9a3cc13066fab12e60f39c",
+      "event": "6aa58a15349fc1a1418a7c43",
+      "status": "confirmed",
+      "quantity": 1,
+      "reservationCode": "RES-1789522017542-689",
+      "cancelledAt": null,
+      "createdAt": "2026-09-16T19:30:00.000Z",
+      "updatedAt": "2026-09-16T19:30:00.000Z"
+    }
+  ]
+}
+
+Errores posibles:
+
+401 Unauthorized: usuario no autenticado.
+{
+  "status": "error",
+  "message": "No autenticado"
+}
+
+403 Forbidden: el usuario no es administrador ni organizador del evento.
+
+{
+  "status": "error",
+  "message": "No tenés permisos para consultar los tickets de este evento"
+}
+
+404 Not Found: el evento no existe.
+
+{
+  "status": "error",
+  "message": "Evento no encontrado"
+}
+
+Nota: Si el evento existe pero no tiene inscripciones, devuelve 200 OK con un payload vacío:
+
+{
+  "status": "success",
+  "payload": []
+}
+```
+
+---
+
+### PATCH `/api/tickets/:tid/cancel`
+
+Permite cancelar una inscripción existente.
+
+**Autenticación:** Sí.
+
+**Roles:** Usuario propietario del ticket o `admin`.
+
+**Comportamiento:**
+
+- Verifica que el ticket exista.
+- El usuario solo puede cancelar sus propios tickets.
+- El administrador puede cancelar cualquier ticket.
+- No se elimina físicamente el ticket.
+- El estado del ticket cambia a `cancelled`.
+- Se registra la fecha de cancelación en `cancelledAt`.
+- Un ticket ya cancelado no puede volver a cancelarse.
+- Los tickets cancelados dejan de ocupar capacidad del evento.
+
+**Respuesta exitosa:** `200 OK`
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "_id": "6aa9f0613428ab8186e09b91",
+    "user": "6a9a3cc13066fab12e60f39c",
+    "event": "6aa58a15349fc1a1418a7c43",
+    "status": "cancelled",
+    "quantity": 1,
+    "reservationCode": "RES-1789522017542-689",
+    "cancelledAt": "2026-09-16T20:00:00.000Z",
+    "createdAt": "2026-09-16T19:30:00.000Z",
+    "updatedAt": "2026-09-16T20:00:00.000Z"
+  }
+}
+
+Errores posibles:
+
+401 Unauthorized: usuario no autenticado.
+
+{
+  "status": "error",
+  "message": "No autenticado"
+}
+
+403 Forbidden: el usuario no es propietario del ticket ni administrador.
+
+{
+  "status": "error",
+  "message": "No tenés permisos para cancelar este ticket"
+}
+
+404 Not Found: el ticket no existe.
+
+{
+  "status": "error",
+  "message": "Ticket no encontrado"
+}
+
+400 Bad Request: el ticket ya está cancelado.
+
+{
+  "status": "error",
+  "message": "El ticket ya está cancelado"
+}
+```
+
+Nota: La cancelación libera automáticamente los cupos correspondientes, ya que el servicio solo contabiliza como ocupados los tickets cuyo estado no sea cancelled.
+
+### POST /api/sessions/register
 
 Registra un nuevo usuario.
 
@@ -1032,6 +1402,67 @@ page menor a 1 y limit menor a 1 → 400 Bad Request
 
 Cancelación de evento sin eliminación física → funcionamiento correcto
 
+## Pruebas realizadas - PE7
+
+POST /api/events/:eid/tickets con usuario autenticado → 201 Created
+
+Envío de correo de confirmación después de una inscripción exitosa → funcionamiento correcto
+
+POST /api/events/:eid/tickets sin sesión → 401 Unauthorized
+
+POST /api/events/:eid/tickets con evento inexistente → 404 Not Found
+
+POST /api/events/:eid/tickets con evento cancelado → 400 Bad Request
+
+POST /api/events/:eid/tickets con quantity: 0 → 400 Bad Request
+
+POST /api/events/:eid/tickets superando la capacidad disponible → 400 Bad Request
+
+POST /api/events/:eid/tickets con inscripción activa duplicada → 400 Bad Request
+
+GET /api/tickets/my-tickets autenticado → 200 OK
+
+GET /api/tickets/my-tickets sin sesión → 401 Unauthorized
+
+GET /api/events/:eid/tickets como organizer propietario del evento → 200 OK
+
+GET /api/events/:eid/tickets como admin → 200 OK
+
+GET /api/events/:eid/tickets como usuario común → 403 Forbidden
+
+GET /api/events/:eid/tickets como organizer de otro evento → 403 Forbidden
+
+PATCH /api/tickets/:tid/cancel por el propietario → 200 OK
+
+Cancelación de ticket sin eliminación física → funcionamiento correcto
+
+Ticket cancelado pasa a estado cancelled → funcionamiento correcto
+
+Registro de cancelledAt al cancelar un ticket → funcionamiento correcto
+
+Cancelación de ticket libera los cupos disponibles → funcionamiento correcto
+
+Nueva inscripción después de cancelar un ticket → 201 Created
+
+PATCH /api/tickets/:tid/cancel sobre ticket de otro usuario → 403 Forbidden
+
+PATCH /api/tickets/:tid/cancel sobre ticket inexistente → 404 Not Found
+
+PATCH /api/tickets/:tid/cancel sobre ticket ya cancelado → 400 Bad Request
+
+### Arquitectura del módulo de inscripciones
+
+El flujo de inscripciones mantiene la separación de responsabilidades de la arquitectura del proyecto:
+
+- **Controller:** recibe los parámetros de la petición, obtiene los datos del usuario autenticado y devuelve la respuesta HTTP.
+- **Service:** contiene las reglas de negocio relacionadas con las inscripciones, validación de eventos, control de capacidad, duplicados y cancelaciones.
+- **DAO:** actúa como capa de acceso a los datos utilizados por el servicio.
+- **Repository:** centraliza las operaciones de persistencia sobre el modelo `Ticket`.
+- **Model:** define la estructura y validaciones del documento `Ticket` en MongoDB.
+- **Middleware:** controla la autenticación y los permisos necesarios para consultar las inscripciones de un evento.
+- **Mail Service:** encapsula el envío de correos de confirmación.
+- **Mailer:** configura el transporte SMTP utilizado por Nodemailer mediante variables de entorno.
+
 ## Seguridad
 
 Se aplicaron las siguientes medidas:
@@ -1056,6 +1487,14 @@ Se aplicaron las siguientes medidas:
 
 - Las credenciales sensibles no se almacenan en el código fuente.
 
+### Seguridad de las inscripciones
+
+Las inscripciones utilizan el usuario autenticado obtenido mediante Passport/JWT.
+
+El usuario no puede indicar manualmente el propietario del ticket desde el body de la petición. El identificador del usuario se obtiene directamente de `req.user`.
+
+Las operaciones sobre tickets verifican los permisos correspondientes antes de permitir la acción. Los tickets no se eliminan físicamente al ser cancelados.
+
 ## Preparación para providers externos
 
 La configuración de Passport se encuentra centralizada en:
@@ -1066,10 +1505,10 @@ Esta estructura permite incorporar nuevas estrategias de autenticación sin modi
 
 El sistema queda preparado para incorporar futuros providers externos, como:
 
-- GitHub
+- GitHub.
 
-- Google
+- Google.
 
-- Otros proveedores OAuth
+- Otros proveedores OAuth.
 
-La incorporación de nuevas estrategias puede realizarse dentro de passport.config.js, manteniendo separada la configuración
+La incorporación de nuevas estrategias puede realizarse dentro de passport.config.js, manteniendo separada la configuración.
