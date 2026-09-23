@@ -1,17 +1,17 @@
-import userRepository from "../repository/user.repository.js";
+import User from "../models/User.js";
 
-class UsersDAO {
-  async getByEmail(email) {
-    return await userRepository.getByEmail(email);
+class UserDAO {
+  async findByEmail(email) {
+    return await User.findOne({ email });
   }
 
-  async getById(id) {
-    return await userRepository.getById(id);
+  async findById(id) {
+    return await User.findById(id);
   }
 
   async create(userData) {
-    return await userRepository.create(userData);
+    return await User.create(userData);
   }
 }
 
-export default new UsersDAO();
+export default new UserDAO();

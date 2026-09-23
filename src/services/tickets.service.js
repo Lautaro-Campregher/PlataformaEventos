@@ -1,11 +1,11 @@
-import ticketsDao from "../dao/tickets.dao.js";
-import eventsDao from "../dao/events.dao.js";
-import usersDao from "../dao/users.dao.js";
+import ticketsRepository from "../repository/tickets.repository.js";
+import eventsRepository from "../repository/events.repository.js";
+import usersRepository from "../repository/user.repository.js";
 import mailService from "./mail.service.js";
 
 class TicketService {
   async createTicket(eventId, userId, quantity) {
-    const event = await eventsDao.getEventById(eventId);
+    const event = await eventsRepository.findEventById(eventId);
 
     if (!event) {
       const error = new Error("Evento no encontrado");
@@ -37,7 +37,7 @@ class TicketService {
       throw error;
     }
 
-    const existingTicket = await ticketsDao.getActiveTicketByUserAndEvent(
+    const existingTicket = await ticketsRepository.findActiveTicket(
       userId,
       eventId,
     );
@@ -50,7 +50,7 @@ class TicketService {
       throw error;
     }
 
-    const tickets = await ticketsDao.getTicketsByEvent(eventId);
+    const tickets = await ticketsRepository.findTicketsByEvent(eventId);
 
     const occupiedSeats = tickets
       .filter((ticket) => ticket.status !== "cancelled")
@@ -70,7 +70,7 @@ class TicketService {
       Math.random() * 10000,
     )}`;
 
-    const ticket = await ticketsDao.createTicket({
+    const ticket = await ticketsRepository.createTicket({
       user: userId,
       event: eventId,
       status: "confirmed",
@@ -78,7 +78,7 @@ class TicketService {
       reservationCode,
     });
 
-    const user = await usersDao.getById(userId);
+    const user = await usersRepository.findUserById(userId);
 
     await mailService.sendTicketConfirmation({
       email: user.email,
@@ -90,11 +90,11 @@ class TicketService {
   }
 
   async getMyTickets(userId) {
-    return await ticketsDao.getTicketsByUser(userId);
+    return await ticketsRepository.findMyTickets(userId);
   }
 
   async getTicketsByEvent(eventId) {
-    const event = await eventsDao.getEventById(eventId);
+    const event = await eventsRepository.findEventById(eventId);
 
     if (!event) {
       const error = new Error("Evento no encontrado");
@@ -102,11 +102,11 @@ class TicketService {
       throw error;
     }
 
-    return await ticketsDao.getTicketsByEvent(eventId);
+    return await ticketsRepository.findTicketsByEvent(eventId);
   }
 
   async cancelTicket(ticketId, userId, role) {
-    const ticket = await ticketsDao.getTicketById(ticketId);
+    const ticket = await ticketsRepository.findTicketById(ticketId);
 
     if (!ticket) {
       const error = new Error("Ticket no encontrado");
@@ -129,12 +129,10 @@ class TicketService {
       throw error;
     }
 
-    const updatedTicket = await ticketsDao.updateTicket(ticketId, {
+    return await ticketsRepository.updateTicket(ticketId, {
       status: "cancelled",
       cancelledAt: new Date(),
     });
-
-    return updatedTicket;
   }
 }
 

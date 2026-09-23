@@ -1,4 +1,5 @@
 import eventsService from "../services/events.service.js";
+import { eventDTO } from "../dto/event.dto.js";
 
 export const createEventController = async (req, res, next) => {
   try {
@@ -22,7 +23,7 @@ export const createEventController = async (req, res, next) => {
 
     return res.status(201).json({
       status: "success",
-      payload: newEvent,
+      payload: eventDTO(newEvent),
     });
   } catch (error) {
     next(error);
@@ -47,7 +48,10 @@ export const getEventsController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      payload: events,
+      payload: {
+        ...events,
+        data: events.data.map(eventDTO),
+      },
     });
   } catch (error) {
     next(error);
@@ -62,7 +66,7 @@ export const getEventByIdController = async (req, res, next) => {
 
     res.status(200).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
     next(error);
@@ -77,7 +81,7 @@ export const updateEventController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
     next(error);
@@ -93,7 +97,7 @@ export const changeEventStatusController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
     next(error);

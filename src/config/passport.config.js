@@ -2,7 +2,7 @@ import "dotenv/config";
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
-import userDAO from "../dao/users.dao.js";
+import userRepository from "../repository/user.repository.js";
 import userServices from "../services/user.services.js";
 import { validatePassword } from "../utils/hash.js";
 
@@ -34,12 +34,10 @@ passport.use(
 
         return done(null, newUser);
       } catch (error) {
-        if (error.code === "EMAIL_EXISTS") {
-          return done(null, false, {
-            message: "El email ya está registrado",
-          });
-        }
-        return done(error);
+        return done(null, false, {
+          message: error.message,
+          code: error.code,
+        });
       }
     },
   ),
@@ -47,7 +45,6 @@ passport.use(
 
 passport.use(
   "login",
-
   new LocalStrategy(
     {
       usernameField: "email",
@@ -56,9 +53,9 @@ passport.use(
 
     async (email, password, done) => {
       try {
-        const normalizedEmail = email.trim().toLocaleLowerCase();
+        const normalizedEmail = email.trim().toLowerCase();
 
-        const user = await userDAO.getByEmail(normalizedEmail);
+        const user = await userRepository.findUserByEmail(normalizedEmail);
 
         if (!user) {
           return done(null, false, {
@@ -73,6 +70,7 @@ passport.use(
             message: "Credenciales inválidas",
           });
         }
+
         return done(null, user);
       } catch (error) {
         return done(error);
@@ -91,17 +89,15 @@ const cookieExtractor = (req) => {
 
 passport.use(
   "current",
-
   new JwtStrategy(
     {
       jwtFromRequest: ExtractJwt.fromExtractors([cookieExtractor]),
-
       secretOrKey: process.env.JWT_SECRET,
     },
 
     async (payload, done) => {
       try {
-        const user = await userDAO.getById(payload.id);
+        const user = await userRepository.findUserById(payload.id);
 
         if (!user) {
           return done(null, false);

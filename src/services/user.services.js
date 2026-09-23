@@ -1,5 +1,5 @@
 import { createHash } from "../utils/hash.js";
-import userDAO from "../dao/users.dao.js";
+import userRepository from "../repository/user.repository.js";
 
 class UserService {
   async registerUser({ first_name, last_name, email, password }) {
@@ -8,26 +8,28 @@ class UserService {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     if (!emailRegex.test(normalizedEmail)) {
-      throw new Error("Email inválido");
+      const error = new Error("Email inválido");
+      error.code = "INVALID_EMAIL";
+      throw error;
     }
 
     if (password.length < 8) {
-      throw new Error("La contraseña debe tener al menos 8 caracteres");
+      const error = new Error("La contraseña debe tener al menos 8 caracteres");
+      error.code = "INVALID_PASSWORD";
+      throw error;
     }
 
-    const existingUser = await userDAO.getByEmail(normalizedEmail);
+    const existingUser = await userRepository.findUserByEmail(normalizedEmail);
 
     if (existingUser) {
       const error = new Error("El email ya está registrado");
-
       error.code = "EMAIL_EXISTS";
-
       throw error;
     }
 
     const hashedPassword = await createHash(password);
 
-    const newUser = await userDAO.create({
+    const newUser = await userRepository.createUser({
       first_name,
       last_name,
       email: normalizedEmail,
@@ -37,13 +39,7 @@ class UserService {
       providerId: null,
     });
 
-    return {
-      id: newUser._id,
-      first_name: newUser.first_name,
-      last_name: newUser.last_name,
-      email: newUser.email,
-      role: newUser.role,
-    };
+    return newUser;
   }
 }
 

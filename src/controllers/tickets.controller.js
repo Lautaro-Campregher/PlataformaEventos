@@ -1,4 +1,5 @@
 import ticketsService from "../services/tickets.service.js";
+import { ticketDTO } from "../dto/tickets.dto.js";
 
 export const createTicketController = async (req, res, next) => {
   try {
@@ -13,7 +14,7 @@ export const createTicketController = async (req, res, next) => {
 
     return res.status(201).json({
       status: "success",
-      payload: ticket,
+      payload: ticketDTO(ticket),
     });
   } catch (error) {
     next(error);
@@ -26,7 +27,7 @@ export const getMyTicketsController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      payload: tickets,
+      payload: tickets.map(ticketDTO),
     });
   } catch (error) {
     next(error);
@@ -41,7 +42,7 @@ export const getEventTicketsController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      payload: tickets,
+      payload: tickets.map(ticketDTO),
     });
   } catch (error) {
     next(error);
@@ -60,7 +61,7 @@ export const cancelTicketController = async (req, res, next) => {
 
     return res.status(200).json({
       status: "success",
-      payload: ticket,
+      payload: ticketDTO(ticket),
     });
   } catch (error) {
     next(error);

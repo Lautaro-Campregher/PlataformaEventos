@@ -1,10 +1,10 @@
-import Event from "../models/Event.js";
+import eventRepository from "../repository/events.repository.js";
 
 export const authorizeEventTickets = async (req, res, next) => {
   try {
     const { eid } = req.params;
 
-    const event = await Event.findById(eid);
+    const event = await eventRepository.findById(eid);
 
     if (!event) {
       return res.status(404).json({

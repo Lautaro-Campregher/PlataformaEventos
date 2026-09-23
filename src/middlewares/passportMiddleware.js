@@ -10,7 +10,7 @@ export const passportMiddleware = (strategy, message) => {
       if (!user) {
         return res.status(401).json({
           status: "error",
-          message,
+          message: info?.message || message,
         });
       }
 

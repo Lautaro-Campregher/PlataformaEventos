@@ -1,14 +1,16 @@
-import Event from "../models/Event.js";
+import eventRepository from "../repository/events.repository.js";
 
 export const authorizeEventOwnerOrAdmin = async (req, res, next) => {
   try {
     const { eventId } = req.params;
-    const event = await Event.findById(eventId);
+
+    const event = await eventRepository.findById(eventId);
 
     if (!event) {
-      return res
-        .status(404)
-        .json({ status: "error", message: "no se encontró el evento" });
+      return res.status(404).json({
+        status: "error",
+        message: "no se encontró el evento",
+      });
     }
 
     const role = req.user.role;
@@ -25,8 +27,6 @@ export const authorizeEventOwnerOrAdmin = async (req, res, next) => {
     req.event = event;
     next();
   } catch (error) {
-    return res
-      .status(500)
-      .json({ status: "error", message: "Internal Server Error" });
+    next(error);
   }
 };

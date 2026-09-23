@@ -1,20 +1,31 @@
-import eventRepository from "../repository/events.repository.js";
+import Event from "../models/Event.js";
 
 class EventDAO {
-  async createEvent(eventData) {
-    return await eventRepository.create(eventData);
+  async create(eventData) {
+    return await Event.create(eventData);
   }
 
-  async getEventById(id) {
-    return await eventRepository.findById(id);
+  async findById(id) {
+    return await Event.findById(id);
   }
 
-  async getEvents(filters, pagination) {
-    return eventRepository.findAll(filters, pagination);
+  async findAll(filters, { skip, limit, sort }) {
+    const [events, total] = await Promise.all([
+      Event.find(filters).sort(sort).skip(skip).limit(limit),
+      Event.countDocuments(filters),
+    ]);
+
+    return {
+      events,
+      total,
+    };
   }
 
-  async updateEvent(id, eventData) {
-    return await eventRepository.updateById(id, eventData);
+  async updateById(id, eventData) {
+    return await Event.findByIdAndUpdate(id, eventData, {
+      new: true,
+      runValidators: true,
+    });
   }
 }
 

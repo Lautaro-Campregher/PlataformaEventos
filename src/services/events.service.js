@@ -1,4 +1,4 @@
-import eventsDao from "../dao/events.dao.js";
+import eventRepository from "../repository/events.repository.js";
 
 class EventService {
   async createEvent(
@@ -25,7 +25,7 @@ class EventService {
       throw error;
     }
 
-    const newEvent = await eventsDao.createEvent({
+    const newEvent = await eventRepository.createEvent({
       title,
       description,
       category,
@@ -33,7 +33,6 @@ class EventService {
       location,
       capacity,
       price,
-
       organizer: organizerId,
     });
 
@@ -61,19 +60,12 @@ class EventService {
       error.code = "INVALID_LIMIT";
       throw error;
     }
+
     const filters = {};
 
-    if (status) {
-      filters.status = status;
-    }
-
-    if (category) {
-      filters.category = category;
-    }
-
-    if (location) {
-      filters.location = location;
-    }
+    if (status) filters.status = status;
+    if (category) filters.category = category;
+    if (location) filters.location = location;
 
     if (dateFrom || dateTo) {
       filters.date = {};
@@ -95,7 +87,7 @@ class EventService {
 
     sortOptions[sortField] = sortDirection;
 
-    const result = await eventsDao.getEvents(filters, {
+    const result = await eventRepository.findEvents(filters, {
       skip,
       limit,
       sort: sortOptions,
@@ -113,7 +105,7 @@ class EventService {
   }
 
   async getEventById(id) {
-    const event = await eventsDao.getEventById(id);
+    const event = await eventRepository.findEventById(id);
 
     if (!event) {
       const error = new Error("Evento no encontrado");
@@ -125,7 +117,7 @@ class EventService {
   }
 
   async updateEvent(id, eventData) {
-    const event = await eventsDao.getEventById(id);
+    const event = await eventRepository.findEventById(id);
 
     if (!event) {
       const error = new Error("Evento no encontrado");
@@ -177,13 +169,11 @@ class EventService {
       }
     }
 
-    const updatedEvent = await eventsDao.updateEvent(id, cleanEventData);
-
-    return updatedEvent;
+    return await eventRepository.updateEvent(id, cleanEventData);
   }
 
   async changeEventStatus(id, status) {
-    const event = await eventsDao.getEventById(id);
+    const event = await eventRepository.findEventById(id);
 
     if (!event) {
       const error = new Error("Evento no encontrado");
@@ -215,11 +205,9 @@ class EventService {
       throw error;
     }
 
-    const updatedEvent = await eventsDao.updateEvent(id, {
+    return await eventRepository.updateEvent(id, {
       status,
     });
-
-    return updatedEvent;
   }
 }
 

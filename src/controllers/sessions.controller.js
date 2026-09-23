@@ -1,13 +1,13 @@
 import { generateJWT } from "../utils/jwt.js";
-import UserDTO from "../dto/user.dto.js";
+import { userDTO } from "../dto/user.dto.js";
 
 export const register = async (req, res) => {
   try {
-    const userDTO = new UserDTO(req.user);
+    const user = userDTO(req.user);
 
     return res.status(201).json({
       status: "success",
-      payload: userDTO,
+      payload: user,
     });
   } catch (error) {
     return res.status(500).json({
@@ -16,7 +16,6 @@ export const register = async (req, res) => {
     });
   }
 };
-
 export const login = async (req, res) => {
   try {
     const user = req.user;
@@ -45,7 +44,7 @@ export const login = async (req, res) => {
         message: "Credenciales inválidas",
       });
     }
-    res.status(500).json({
+    return res.status(500).json({
       status: "error",
       message: error.message,
     });
@@ -53,11 +52,11 @@ export const login = async (req, res) => {
 };
 
 export const getCurrentUser = async (req, res) => {
-  const userDTO = new UserDTO(req.user);
+  const user = userDTO(req.user);
 
   return res.status(200).json({
     status: "success",
-    payload: userDTO,
+    payload: user,
   });
 };
 

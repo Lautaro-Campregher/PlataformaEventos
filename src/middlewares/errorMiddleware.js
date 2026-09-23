@@ -13,6 +13,20 @@ export const errorMiddleware = (error, req, res, next) => {
     });
   }
 
+  if (error.code === "EMAIL_EXISTS" || error.code === "DUPLICATE_TICKET") {
+    return res.status(409).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+
+  if (info?.code === "INVALID_EMAIL" || info?.code === "INVALID_PASSWORD") {
+    return res.status(400).json({
+      status: "error",
+      message: info.message,
+    });
+  }
+
   if (
     error.code === "INVALID_EVENT_DATE" ||
     error.code === "INVALID_EVENT_CAPACITY" ||
@@ -25,9 +39,10 @@ export const errorMiddleware = (error, req, res, next) => {
     error.code === "EVENT_NOT_PUBLISHED" ||
     error.code === "EVENT_FINISHED" ||
     error.code === "INVALID_QUANTITY" ||
-    error.code === "DUPLICATE_TICKET" ||
     error.code === "INSUFFICIENT_CAPACITY" ||
-    error.code === "TICKET_ALREADY_CANCELLED"
+    error.code === "TICKET_ALREADY_CANCELLED" ||
+    error.code === "INVALID_EMAIL" ||
+    error.code === "INVALID_PASSWORD"
   ) {
     return res.status(400).json({
       status: "error",

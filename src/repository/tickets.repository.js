@@ -1,38 +1,28 @@
-import Ticket from "../models/Ticket.js";
+import ticketDAO from "../dao/tickets.dao.js";
 
 class TicketRepository {
-  async create(ticketData) {
-    return await Ticket.create(ticketData);
+  async createTicket(ticketData) {
+    return await ticketDAO.create(ticketData);
   }
 
-  async findById(id) {
-    return await Ticket.findById(id);
+  async findTicketById(id) {
+    return await ticketDAO.findById(id);
   }
 
-  async findByUser(userId) {
-    return await Ticket.find({ user: userId }).populate(
-      "event",
-      "title date location",
-    );
+  async findMyTickets(userId) {
+    return await ticketDAO.findByUser(userId);
   }
 
-  async findByEvent(eventId) {
-    return await Ticket.find({ event: eventId });
+  async findTicketsByEvent(eventId) {
+    return await ticketDAO.findByEvent(eventId);
   }
 
-  async findActiveByUserAndEvent(userId, eventId) {
-    return await Ticket.findOne({
-      user: userId,
-      event: eventId,
-      status: { $ne: "cancelled" },
-    });
+  async findActiveTicket(userId, eventId) {
+    return await ticketDAO.findActiveByUserAndEvent(userId, eventId);
   }
 
-  async updateById(id, ticketData) {
-    return await Ticket.findByIdAndUpdate(id, ticketData, {
-      new: true,
-      runValidators: true,
-    });
+  async updateTicket(id, ticketData) {
+    return await ticketDAO.updateById(id, ticketData);
   }
 }
 

@@ -116,6 +116,23 @@ admin@example.com 123456 admin
 
 Si un usuario ya existe, el seed no lo duplica.
 
+## Arquitectura por capas
+
+El proyecto utiliza una arquitectura por capas para separar responsabilidades:
+
+- **Routes:** definen los endpoints y aplican los middlewares correspondientes.
+- **Controllers:** reciben las solicitudes HTTP, obtienen los parámetros necesarios y construyen las respuestas.
+- **Services:** contienen la lógica de negocio y las validaciones de la aplicación.
+- **Repositories:** exponen operaciones orientadas al dominio y utilizan los DAOs para acceder a los datos.
+- **DAOs:** son la única capa que accede directamente a los modelos de Mongoose.
+- **Models:** definen la estructura y validaciones de los documentos de MongoDB.
+- **DTOs:** controlan y filtran los datos que se exponen en las respuestas de la API.
+- **Middlewares:** gestionan autenticación, autorización y manejo centralizado de errores.
+
+El flujo general de una operación es:
+
+Routes → Controllers → Services → Repositories → DAOs → Models
+
 ## Autenticación con Passport.js
 
 La autenticación de la aplicación está centralizada mediante Passport.js.
@@ -169,11 +186,9 @@ La estrategia login utiliza Passport Local.
 Se encarga de validar las credenciales del usuario:
 
 - Normaliza el email.
-
-- Busca el usuario mediante el DAO.
-
+- Busca el usuario mediante UserRepository.
+- UserRepository utiliza UserDAO para acceder a MongoDB.
 - Verifica la contraseña mediante Bcrypt.
-
 - Rechaza credenciales incorrectas.
 
 Cuando la autenticación es exitosa, Passport coloca el usuario autenticado en:
@@ -252,11 +267,41 @@ El DTO devuelve únicamente información pública del usuario autenticado:
 
 La contraseña nunca se incluye en las respuestas de autenticación.
 
+## DTOs
+
+La API utiliza DTOs para controlar los datos expuestos en las respuestas.
+
+### UserDTO
+
+Expone únicamente los datos públicos del usuario y nunca incluye la contraseña.
+
+### EventDTO
+
+Define la información del evento que puede ser enviada al cliente.
+
+### TicketDTO
+
+Controla la información de las inscripciones y limita los datos de los documentos relacionados cuando existen referencias pobladas.
+
+Ejemplo:
+
+```json
+{
+  "id": "...",
+  "status": "confirmed",
+  "quantity": 1,
+  "reservationCode": "...",
+  "createdAt": "...",
+  "cancelledAt": null,
+  "event": "..."
+}
+```
+
 ## Middleware de autenticación y autorización
 
 La aplicación utiliza middlewares reutilizables para controlar el acceso a las rutas protegidas.
 
-### Authentication Middleware
+### Authentication Middleware - Middleware de autenticación mediante Passport
 
 Ubicación:
 
@@ -316,8 +361,6 @@ Un usuario común o un organizador que no sea propietario del evento recibe:
 
 403 Forbidden
 
-Esta versión queda alineada con tus archivos reales y además documenta los dos middlewares específicos de PE7.
-
 ## Estructura del proyecto
 
 ```text
@@ -360,7 +403,9 @@ Backend-II/
 
 │   │   └── user.dto.js
 
-│   │
+│   │   └── event.dto.js
+
+│   │   └── tickets.dto.js
 
 │   ├── middlewares/
 
@@ -452,11 +497,13 @@ Define el modelo de eventos mediante Mongoose. Incluye los campos title, descrip
 
 ### src/dao/events.dao.js
 
-Actúa como capa de acceso a los datos de eventos y delega las operaciones al EventRepository.
+Actúa como capa de acceso directo a los datos de eventos mediante Mongoose.
+Es la única capa del módulo que importa directamente el modelo Event.
 
 ### src/repository/events.repository.js
 
-Centraliza las operaciones de persistencia de eventos mediante Mongoose, incluyendo creación, búsqueda, filtros, paginación, ordenamiento y actualización.
+Utiliza EventDAO para exponer operaciones de persistencia orientadas al dominio,
+como crear, buscar, listar y actualizar eventos.
 
 ### src/services/events.service.js
 
@@ -720,7 +767,7 @@ Cuando un usuario con rol `organizer` o `admin` crea un evento, el propietario s
 
 Request:
 
-````json
+```json
 {
   "title": "Evento de prueba",
   "description": "Descripción del evento",
@@ -730,6 +777,7 @@ Request:
   "capacity": 100,
   "price": 5000
 }
+```
 
 Si la solicitud no posee una sesión válida:
 
@@ -848,7 +896,7 @@ Permite a un usuario autenticado inscribirse a un evento publicado.
 {
   "quantity": 1
 }
-````
+```
 
 **Respuesta exitosa:** `201 Created`
 
@@ -856,15 +904,14 @@ Permite a un usuario autenticado inscribirse a un evento publicado.
 {
   "status": "success",
   "payload": {
-    "_id": "...",
-    "user": "...",
-    "event": "...",
+    "id": "6aa9f0613428ab8186e09b91",
     "status": "confirmed",
     "quantity": 1,
-    "reservationCode": "...",
+    "reservationCode": "RES-1789522017542-689",
+    "createdAt": "2026-09-16T19:30:00.000Z",
     "cancelledAt": null,
-    "createdAt": "...",
-    "updatedAt": "..."
+    "event": "6aa58a15349fc1a1418a7c43",
+    "user": "6a9a3cc13066fab12e60f39c"
   }
 }
 ```
@@ -876,7 +923,7 @@ Errores posibles:
 400 Bad Request: evento no publicado.
 400 Bad Request: evento finalizado.
 400 Bad Request: cantidad inválida.
-400 Bad Request: el usuario ya posee una inscripción activa.
+409 Conflict: el usuario ya posee una inscripción activa.
 400 Bad Request: no hay cupos suficientes.
 
 ---
@@ -903,20 +950,19 @@ Permite al usuario autenticado consultar sus propias inscripciones.
   "status": "success",
   "payload": [
     {
-      "_id": "6aa9f0613428ab8186e09b91",
-      "user": "6a9a3cc13066fab12e60f39c",
+      "id": "6aa9f0613428ab8186e09b91",
+      "status": "confirmed",
+      "quantity": 1,
+      "reservationCode": "RES-1789522017542-689",
+      "createdAt": "2026-09-16T19:30:00.000Z",
+      "cancelledAt": null,
       "event": {
-        "_id": "6aa58a15349fc1a1418a7c43",
+        "id": "6aa58a15349fc1a1418a7c43",
         "title": "Evento modificado correctamente",
         "date": "2026-09-30T00:00:00.000Z",
         "location": "Centro Cultural Córdoba"
       },
-      "status": "confirmed",
-      "quantity": 1,
-      "reservationCode": "RES-1789522017542-689",
-      "cancelledAt": null,
-      "createdAt": "2026-09-16T19:30:00.000Z",
-      "updatedAt": "2026-09-16T19:30:00.000Z"
+      "user": "6a9a3cc13066fab12e60f39c"
     }
   ]
 }
@@ -967,15 +1013,14 @@ Permite consultar las inscripciones correspondientes a un evento.
   "status": "success",
   "payload": [
     {
-      "_id": "6aa9f0613428ab8186e09b91",
-      "user": "6a9a3cc13066fab12e60f39c",
-      "event": "6aa58a15349fc1a1418a7c43",
+      "id": "6aa9f0613428ab8186e09b91",
       "status": "confirmed",
       "quantity": 1,
       "reservationCode": "RES-1789522017542-689",
-      "cancelledAt": null,
       "createdAt": "2026-09-16T19:30:00.000Z",
-      "updatedAt": "2026-09-16T19:30:00.000Z"
+      "cancelledAt": null,
+      "event": "6aa58a15349fc1a1418a7c43",
+      "user": "6a9a3cc13066fab12e60f39c"
     }
   ]
 }
@@ -1035,17 +1080,16 @@ Permite cancelar una inscripción existente.
 
 ```json
 {
-  "status": "success",
+ "status": "success",
   "payload": {
-    "_id": "6aa9f0613428ab8186e09b91",
-    "user": "6a9a3cc13066fab12e60f39c",
-    "event": "6aa58a15349fc1a1418a7c43",
+    "id": "6aa9f0613428ab8186e09b91",
     "status": "cancelled",
     "quantity": 1,
     "reservationCode": "RES-1789522017542-689",
-    "cancelledAt": "2026-09-16T20:00:00.000Z",
     "createdAt": "2026-09-16T19:30:00.000Z",
-    "updatedAt": "2026-09-16T20:00:00.000Z"
+    "cancelledAt": "2026-09-16T20:00:00.000Z",
+    "event": "6aa58a15349fc1a1418a7c43",
+    "user": "6a9a3cc13066fab12e60f39c"
   }
 }
 
@@ -1130,7 +1174,7 @@ El campo `role` no se recibe desde el registro público y se asigna automáticam
 {
   "status": "error",
 
-  "message": "Faltan campos obligatorios"
+  "message": "Todos los campos son obligatorios"
 }
 ```
 
@@ -1154,7 +1198,7 @@ El campo `role` no se recibe desde el registro público y se asigna automáticam
 }
 ```
 
-**Response `401` — Email ya registrado:**
+**Response `409` — Email ya registrado:**
 
 Para mantener una respuesta genérica y no revelar información sobre usuarios registrados:
 
@@ -1162,7 +1206,7 @@ Para mantener una respuesta genérica y no revelar información sobre usuarios r
 {
   "status": "error",
 
-  "message": "Credenciales inválidas"
+  "message": "El email ya está registrado"
 }
 ```
 
@@ -1192,7 +1236,7 @@ La cookie se configura como `HttpOnly`, `SameSite: lax` y con una duración de u
 {
   "status": "success",
 
-  "message": "Login correcto"
+  "message": "Login Correcto"
 }
 ```
 
@@ -1235,16 +1279,18 @@ La respuesta no incluye la contraseña.
 ```json
 {
   "status": "success",
-
   "payload": {
     "id": "665f2a...",
-
+    "first_name": "Ana",
+    "last_name": "Marquez",
     "email": "ana@mail.com",
-
-    "role": "user"
+    "role": "user",
+    "provider": "local"
   }
 }
 ```
+
+La contraseña nunca se incluye en la respuesta.
 
 **Response `401` — Sin cookie o token inválido/expirado:**
 
@@ -1418,7 +1464,7 @@ POST /api/events/:eid/tickets con quantity: 0 → 400 Bad Request
 
 POST /api/events/:eid/tickets superando la capacidad disponible → 400 Bad Request
 
-POST /api/events/:eid/tickets con inscripción activa duplicada → 400 Bad Request
+POST /api/events/:eid/tickets con inscripción activa duplicada → 409 Conflict
 
 GET /api/tickets/my-tickets autenticado → 200 OK
 
