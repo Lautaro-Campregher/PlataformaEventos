@@ -27,6 +27,46 @@ class EventDAO {
       runValidators: true,
     });
   }
+
+  async reserveSeats(eventId, seats) {
+    return Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        status: "published",
+        date: { $gt: new Date() },
+        $expr: {
+          $lte: [{ $add: ["$reserved", seats] }, "$capacity"],
+        },
+      },
+      {
+        $inc: {
+          reserved: seats,
+        },
+      },
+      {
+        new: true,
+      },
+    );
+  }
+
+  async releaseSeats(eventId, seats) {
+    return Event.findOneAndUpdate(
+      {
+        _id: eventId,
+        reserved: {
+          $gte: seats,
+        },
+      },
+      {
+        $inc: {
+          reserved: -seats,
+        },
+      },
+      {
+        new: true,
+      },
+    );
+  }
 }
 
 export default new EventDAO();

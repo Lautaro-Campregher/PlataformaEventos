@@ -16,6 +16,14 @@ class EventRepository {
   async updateEvent(id, eventData) {
     return await eventDAO.updateById(id, eventData);
   }
+
+  async reserveSeats(eventId, seats) {
+    return await eventDAO.reserveSeats(eventId, seats);
+  }
+
+  async releaseSeats(eventId, seats) {
+    return await eventDAO.releaseSeats(eventId, seats);
+  }
 }
 
 export default new EventRepository();

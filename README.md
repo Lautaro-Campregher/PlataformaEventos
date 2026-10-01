@@ -106,13 +106,13 @@ El seed crea los siguientes usuarios:
 
 Email Password Rol
 
-user@example.com 123456 user
+user@example.com 12345678 user
 
-organizer@example.com 123456 organizer
+organizer@example.com 12345678 organizer
 
-organizer2@example.com 123456 organizer
+organizer2@example.com 12345678 organizer
 
-admin@example.com 123456 admin
+admin@example.com 12345678 admin
 
 Si un usuario ya existe, el seed no lo duplica.
 
@@ -493,7 +493,15 @@ Los siguientes archivos implementan la entidad Event y la lógica correspondient
 
 ### src/models/Event.js
 
-Define el modelo de eventos mediante Mongoose. Incluye los campos title, description, category, date, location, capacity, price, status y organizer. El campo organizer utiliza una referencia ObjectId hacia User. También establece las validaciones de esquema y los estados permitidos.
+Define el modelo de eventos mediante Mongoose. Incluye los campos title, description, category, date, location, capacity, price, status, organizer y reserved. El campo organizer utiliza una referencia ObjectId hacia User. También establece las validaciones de esquema y los estados permitidos.
+
+reserved: contador atómico de cupos actualmente ocupados por inscripciones confirmadas.
+Se utiliza para controlar la disponibilidad de cupos de forma segura al momento de realizar una inscripción. Al crear una inscripción, el valor se incrementa mediante una operación atómica únicamente si la cantidad de lugares disponibles es suficiente. Al cancelar una inscripción, los cupos correspondientes se liberan decrementando este contador.
+
+La disponibilidad de un evento se obtiene mediante capacity - reserved.
+
+reserved = cantidad de cupos actualmente ocupados
+disponibles = capacity - reserved
 
 ### src/dao/events.dao.js
 
@@ -665,9 +673,14 @@ Ejemplo:
 
 ### Control de capacidad
 
-La capacidad disponible se calcula tomando la capacidad total del evento y restando la cantidad ocupada por las inscripciones activas.
+El evento mantiene un contador reserved que representa la cantidad
+de lugares actualmente ocupados por inscripciones activas.
 
-Los tickets cancelados no se contabilizan como ocupación, por lo que los cupos liberados pueden ser utilizados nuevamente por otros usuarios.
+Al crear una inscripción, el contador se incrementa de forma atómica
+si existen cupos disponibles.
+
+Al cancelar una inscripción, el contador se decrementa y los lugares
+vuelven a quedar disponibles.
 
 ## Estados de las inscripciones
 
@@ -742,8 +755,13 @@ Obtiene la lista de eventos disponibles.
 ```json
 {
   "status": "success",
-
-  "payload": []
+  "payload": {
+    "data": [],
+    "page": 2,
+    "limit": 5,
+    "total": 1,
+    "totalPages": 1
+  }
 }
 ```
 
@@ -924,7 +942,7 @@ Errores posibles:
 400 Bad Request: evento finalizado.
 400 Bad Request: cantidad inválida.
 409 Conflict: el usuario ya posee una inscripción activa.
-400 Bad Request: no hay cupos suficientes.
+409 Conflict: no hay cupos suficientes.
 
 ---
 

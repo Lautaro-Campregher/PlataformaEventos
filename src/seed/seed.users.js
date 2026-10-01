@@ -9,28 +9,28 @@ const USERS = [
     first_name: "Ana",
     last_name: "Gomez",
     email: "user@example.com",
-    password: "123456",
+    password: "12345678",
     role: "user",
   },
   {
     first_name: "Carlos",
     last_name: "Lopez",
     email: "organizer@example.com",
-    password: "123456",
+    password: "12345678",
     role: "organizer",
   },
   {
     first_name: "Diego",
     last_name: "Perez",
     email: "organizer2@example.com",
-    password: "123456",
+    password: "12345678",
     role: "organizer",
   },
   {
     first_name: "Elena",
     last_name: "Diaz",
     email: "admin@example.com",
-    password: "123456",
+    password: "12345678",
     role: "admin",
   },
 ];
@@ -40,7 +40,7 @@ async function seedUsers() {
   console.log("MongoDB conectado");
 
   for (const user of USERS) {
-    const existing = await userDAO.getByEmail(user.email);
+    const existing = await userDAO.findByEmail(user.email);
 
     if (existing) {
       console.log(`SKIP — ${user.email} (ya existe, role=${existing.role})`);
@@ -63,10 +63,10 @@ async function seedUsers() {
   }
 
   console.log("\nCredenciales de login:");
-  console.log("user        -> user@example.com / 123456");
-  console.log("organizer   -> organizer@example.com / 123456");
-  console.log("organizer2  -> organizer2@example.com / 123456");
-  console.log("admin       -> admin@example.com / 123456");
+  console.log("user        -> user@example.com / 12345678");
+  console.log("organizer   -> organizer@example.com / 12345678");
+  console.log("organizer2  -> organizer2@example.com / 12345678");
+  console.log("admin       -> admin@example.com / 12345678");
 
   await mongoose.disconnect();
 }

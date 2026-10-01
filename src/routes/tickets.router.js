@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { validateInput } from "../middlewares/validateInput.js";
+import { createTicketInputDTO } from "../dto/tickets.input.dto.js";
 import { passportMiddleware } from "../middlewares/passportMiddleware.js";
 import { authorizeEventTickets } from "../middlewares/authorizeEventTickets.js";
 import {
@@ -13,6 +15,7 @@ const router = Router();
 router.post(
   "/events/:eid/tickets",
   passportMiddleware("current", "No autenticado"),
+  validateInput(createTicketInputDTO),
   createTicketController,
 );
 

@@ -4,7 +4,7 @@ export const authorizeEventTickets = async (req, res, next) => {
   try {
     const { eid } = req.params;
 
-    const event = await eventRepository.findById(eid);
+    const event = await eventRepository.findEventById(eid);
 
     if (!event) {
       return res.status(404).json({

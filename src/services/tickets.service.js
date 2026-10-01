@@ -50,18 +50,13 @@ class TicketService {
       throw error;
     }
 
-    const tickets = await ticketsRepository.findTicketsByEvent(eventId);
+    const reservedEvent = await eventsRepository.reserveSeats(
+      eventId,
+      quantity,
+    );
 
-    const occupiedSeats = tickets
-      .filter((ticket) => ticket.status !== "cancelled")
-      .reduce((total, ticket) => total + ticket.quantity, 0);
-
-    const availableSeats = event.capacity - occupiedSeats;
-
-    if (availableSeats < quantity) {
-      const error = new Error(
-        `No hay cupos suficientes. Cupos disponibles: ${availableSeats}`,
-      );
+    if (!reservedEvent) {
+      const error = new Error("No hay suficiente capacidad disponible");
       error.code = "INSUFFICIENT_CAPACITY";
       throw error;
     }
@@ -82,7 +77,7 @@ class TicketService {
 
     await mailService.sendTicketConfirmation({
       email: user.email,
-      event,
+      event: reservedEvent,
       ticket,
     });
 
@@ -129,10 +124,32 @@ class TicketService {
       throw error;
     }
 
-    return await ticketsRepository.updateTicket(ticketId, {
+    const cancelledTicket = await ticketsRepository.updateTicket(ticketId, {
       status: "cancelled",
       cancelledAt: new Date(),
     });
+
+    try {
+      const releasedEvent = await eventsRepository.releaseSeats(
+        ticket.event.toString(),
+        ticket.quantity,
+      );
+
+      if (!releasedEvent) {
+        const error = new Error("No se pudieron liberar los lugares");
+        error.code = "SEAT_RELEASE_FAILED";
+        throw error;
+      }
+
+      return cancelledTicket;
+    } catch (error) {
+      await ticketsRepository.updateTicket(ticketId, {
+        status: "confirmed",
+        cancelledAt: null,
+      });
+
+      throw error;
+    }
   }
 }
 

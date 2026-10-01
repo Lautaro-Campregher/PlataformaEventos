@@ -9,6 +9,7 @@ export const eventDTO = (event) => {
     date: event.date,
     location: event.location,
     capacity: event.capacity,
+    reserved: event.reserved,
     price: event.price,
     status: event.status,
     organizer: event.organizer,
