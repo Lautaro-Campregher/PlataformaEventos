@@ -10,6 +10,8 @@ La autenticación fue refactorizada utilizando Passport.js, centralizando las es
 
 La API mantiene el uso de JWT y cookies HTTP Only para la autenticación.
 
+El proyecto incluye control de capacidad de eventos e inscripciones y envío de correos de confirmación mediante Nodemailer.
+
 ## Tecnologías
 
 - Node.js
@@ -317,6 +319,8 @@ Si no existe una sesión válida, la API responde con:
 
 401 Unauthorized
 
+authenticationMiddleware.js se utiliza en las rutas administrativas que requieren autenticación, mientras que passportMiddleware.js encapsula las estrategias de Passport utilizadas por las rutas de sesiones y recursos protegidos.
+
 ### Authorization Middleware
 
 Ubicación:
@@ -616,7 +620,7 @@ Ejemplo:
 {
   "status": "error",
 
-  "message": "Token inválido o manipulado"
+  "message": "No autenticado"
 }
 ```
 
@@ -756,8 +760,20 @@ Obtiene la lista de eventos disponibles.
 {
   "status": "success",
   "payload": {
-    "data": [],
-    "page": 2,
+    "data": [
+      {
+        "id": "665f2a...",
+        "title": "Evento de prueba",
+        "category": "workshop",
+        "date": "2027-09-20T20:00:00.000Z",
+        "location": "Centro Cultural Córdoba",
+        "capacity": 100,
+        "reserved": 25,
+        "price": 5000,
+        "status": "published"
+      }
+    ],
+    "page": 1,
     "limit": 5,
     "total": 1,
     "totalPages": 1
@@ -790,7 +806,7 @@ Request:
   "title": "Evento de prueba",
   "description": "Descripción del evento",
   "category": "workshop",
-  "date": "2026-09-20",
+  "date": "2027-09-20",
   "location": "Centro Cultural Córdoba",
   "capacity": 100,
   "price": 5000
@@ -1316,7 +1332,7 @@ La contraseña nunca se incluye en la respuesta.
 {
   "status": "error",
 
-  "message": "Token inválido o manipulado"
+  "message": "No autenticado"
 }
 ```
 
@@ -1344,7 +1360,7 @@ Después de realizar el logout, una solicitud a `/api/sessions/current` sin una 
 {
   "status": "error",
 
-  "message": "Token inválido o manipulado"
+  "message": "No autenticado"
 }
 ```
 
@@ -1480,7 +1496,7 @@ POST /api/events/:eid/tickets con evento cancelado → 400 Bad Request
 
 POST /api/events/:eid/tickets con quantity: 0 → 400 Bad Request
 
-POST /api/events/:eid/tickets superando la capacidad disponible → 400 Bad Request
+POST /api/events/:eid/tickets superando la capacidad disponible → 409 Conflict
 
 POST /api/events/:eid/tickets con inscripción activa duplicada → 409 Conflict
 

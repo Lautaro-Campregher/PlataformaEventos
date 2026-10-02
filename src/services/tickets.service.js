@@ -73,15 +73,39 @@ class TicketService {
       reservationCode,
     });
 
-    const user = await usersRepository.findUserById(userId);
+    try {
+      const user = await usersRepository.findUserById(userId);
 
-    await mailService.sendTicketConfirmation({
-      email: user.email,
-      event: reservedEvent,
-      ticket,
-    });
+      await mailService.sendTicketConfirmation({
+        email: user.email,
+        event: reservedEvent,
+        ticket,
+      });
 
-    return ticket;
+      return ticket;
+    } catch (error) {
+      await ticketsRepository.updateTicket(ticket._id, {
+        status: "cancelled",
+        cancelledAt: new Date(),
+      });
+
+      const releasedEvent = await eventsRepository.releaseSeats(
+        eventId,
+        quantity,
+      );
+
+      if (!releasedEvent) {
+        const compensationError = new Error(
+          "No se pudieron liberar los lugares después de un fallo en el envío del correo",
+        );
+
+        compensationError.code = "SEAT_RELEASE_FAILED";
+
+        throw compensationError;
+      }
+
+      throw error;
+    }
   }
 
   async getMyTickets(userId) {
